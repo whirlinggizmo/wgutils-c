@@ -1,11 +1,13 @@
 #ifndef PATH_H
 #define PATH_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 size_t path_join(const char *base, const char *path, char *buffer, size_t buffer_size);
 
 size_t path_normalize(const char *path, char *buffer, size_t buffer_size);
+bool path_is_absolute(const char *path);
 
 size_t path_length(const char *base, ...);
 

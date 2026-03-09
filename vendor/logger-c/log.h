@@ -25,7 +25,7 @@
 #define ROOT_HANDLER_NAME "root"
 #define DEFAULT NULL
 #define DEFAULT_LEVEL LOG_INFO
-#define DEFAULT_STRAEM stderr
+#define DEFAULT_STREAM stdout
 #define DEFAULT_FILE_NAME "logger/program.log"
 #define DEFAULT_FILE_MODE "a"
 #define DEFAULT_DATE_FORMAT1 "%H:%M:%S"                  // HH:MM:SS
@@ -44,11 +44,8 @@ enum LOG_LEVEL {
     LOG_FATAL
 };
 
-static const char *level_strings[] = {"TRACE", "DEBUG", "INFO",
-                                      "WARN",  "ERROR", "FATAL"};
-
-static const char *level_colors[] = {"\x1b[94m", "\x1b[36m", "\x1b[32m",
-                                     "\x1b[33m", "\x1b[31m", "\x1b[35m"};
+extern const char *level_strings[];
+extern const char *level_colors[];
 
 typedef struct record record_t;
 

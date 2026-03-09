@@ -23,8 +23,14 @@
 #include "log.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
+
+const char *level_strings[] = {"TRACE", "DEBUG", "INFO",
+                               "WARN",  "ERROR", "FATAL"};
+const char *level_colors[] = {"\x1b[94m", "\x1b[36m", "\x1b[32m",
+                              "\x1b[33m", "\x1b[31m", "\x1b[35m"};
 
 typedef struct handler handler_t;
 typedef struct logger logger_t;
@@ -49,6 +55,51 @@ static logger_t L = {
     .lock = NULL,
     .count = 0,
 };
+
+static bool path_is_absolute_local(const char *path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+
+    // POSIX absolute path.
+    if (path[0] == '/') {
+        return true;
+    }
+
+    // Windows UNC path.
+    if (path[0] == '\\' && path[1] == '\\') {
+        return true;
+    }
+
+    // Windows drive letter path, e.g. C:\foo or C:/foo.
+    if (isalpha((unsigned char)path[0]) && path[1] == ':' &&
+        (path[2] == '\\' || path[2] == '/')) {
+        return true;
+    }
+
+    // URL-like path.
+    return strstr(path, "://") != NULL;
+}
+
+static const char *format_source_path(const char *path, char *buffer,
+                                      size_t buffer_size)
+{
+    if (path == NULL) {
+        return "";
+    }
+
+    if (path_is_absolute_local(path)) {
+        return path;
+    }
+
+    if (buffer_size < 3) {
+        return path;
+    }
+
+    snprintf(buffer, buffer_size, "./%s", path);
+    return buffer;
+}
 
 static void lock(void)
 {
@@ -76,7 +127,7 @@ __attribute__((constructor)) static void init_logger(void)
         .name = ROOT_HANDLER_NAME,
         .dump_fn = dump_log,
         .fmt_fn = color_fmt1,
-        .fp = DEFAULT_STRAEM,
+        .fp = DEFAULT_STREAM,
         .level = LOG_TRACE,
         .quiet = false,
         .date_fmt = DEFAULT_DATE_FORMAT1,
@@ -89,7 +140,7 @@ static int log_add_handler(const char *name, log_dump_fn dump_fn,
                            bool quiet, const char *date_fmt)
 {
     if (L.count == MAX_HANDLERS) {
-        fprintf(DEFAULT_STRAEM,
+        fprintf(DEFAULT_STREAM,
                 "[Logger C] Maximum number of handlers reached: %d\n",
                 MAX_HANDLERS);
         return -1;
@@ -110,14 +161,14 @@ static int log_add_handler(const char *name, log_dump_fn dump_fn,
 int log_add_file_handler(const char *filename, const char *filemode,
                          size_t level, const char *name)
 {
-    assert(level >= LOG_TRACE && level <= LOG_FATAL);
+    assert(level <= (size_t)LOG_FATAL);
     assert(name);
     filename = filename ? filename : DEFAULT_FILE_NAME;
     filemode = filemode ? filemode : DEFAULT_FILE_MODE;
     FILE *fp = fopen(filename, filemode);
 
     if (!fp) {
-        fprintf(DEFAULT_STRAEM, "[Logger C] Unable to open log file: %s\n",
+        fprintf(DEFAULT_STREAM, "[Logger C] Unable to open log file: %s\n",
                 filename);
         return -1;
     }
@@ -128,9 +179,9 @@ int log_add_file_handler(const char *filename, const char *filemode,
 
 int log_add_stream_handler(FILE *fp, size_t level, const char *name)
 {
-    assert(level >= LOG_TRACE && level <= LOG_FATAL);
+    assert(level <= (size_t)LOG_FATAL);
     assert(name);
-    fp = fp ? fp : DEFAULT_STRAEM;
+    fp = fp ? fp : DEFAULT_STREAM;
     return log_add_handler(name, dump_log, color_fmt1, fp, level, false,
                            DEFAULT_DATE_FORMAT1);
 }
@@ -158,17 +209,20 @@ void _log_message(int level, const char *file, int line, const char *msg_fmt,
         .msg_fmt = msg_fmt,
     };
 
+    const size_t level_sz = (level < 0) ? 0u : (size_t)level;
     handler_t *rh = &L.handlers[ROOT_HANDLER];
-    if (!rh->quiet && level >= rh->level) {
+    if (!rh->quiet && level_sz >= rh->level) {
         update_record(&rec, rh);
         va_start(rec.ap, msg_fmt);
         rh->dump_fn(&rec);
         va_end(rec.ap);
     }
 
-    for (int i = ROOT_HANDLER + 1; i < L.count && L.handlers[i].dump_fn; i++) {
+    for (size_t i = (size_t)(ROOT_HANDLER + 1);
+         i < L.count && L.handlers[i].dump_fn;
+         i++) {
         handler_t *hd = &L.handlers[i];
-        if (!hd->quiet && level >= hd->level) {
+        if (!hd->quiet && level_sz >= hd->level) {
             update_record(&rec, hd);
             va_start(rec.ap, msg_fmt);
             hd->dump_fn(&rec);
@@ -212,19 +266,19 @@ static void _log_set_attribute(const char *name, const char *member,
     }
 
     if (!safe) {
-        fprintf(DEFAULT_STRAEM,
+        fprintf(DEFAULT_STREAM,
                 "[Logger C] Security Alert: Invalid access to member '%s'\n",
                 member);
         return;
     }
 
-    for (int i = ROOT_HANDLER; i < L.count; i++) {
+    for (size_t i = (size_t)ROOT_HANDLER; i < L.count; i++) {
         if (strcmp(L.handlers[i].name, name) == 0) {
             memcpy((void *) &L.handlers[i] + offset, value, size);
             return;
         }
     }
-    fprintf(DEFAULT_STRAEM, "[Logger C] Handler's name not found: %s\n", name);
+    fprintf(DEFAULT_STREAM, "[Logger C] Handler's name not found: %s\n", name);
 }
 
 // methods to set handler properties
@@ -284,27 +338,39 @@ void dump_log(record_t *rec)
 void color_fmt1(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s %s%-5s\x1b[0m \x1b[90m[%s:%d]:\x1b[0m ";
+    char display_path[1024];
+    const char *source_path = format_source_path(rec->file, display_path,
+                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, level_colors[rec->level],
-            level_strings[rec->level], rec->file, rec->line);
+            level_strings[rec->level], source_path, rec->line);
 }
 
 void color_fmt2(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s (%s) %s%-5s\x1b[0m \x1b[90m[%s:%d]:\x1b[0m ";
+    char display_path[1024];
+    const char *source_path = format_source_path(rec->file, display_path,
+                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, rec->hd_name, level_colors[rec->level],
-            level_strings[rec->level], rec->file, rec->line);
+            level_strings[rec->level], source_path, rec->line);
 }
 
 void no_color_fmt1(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s %-5s [%s:%d]: ";
-    fprintf(rec->hd_fp, fmt, time_buf, level_strings[rec->level], rec->file,
+    char display_path[1024];
+    const char *source_path = format_source_path(rec->file, display_path,
+                                                 sizeof(display_path));
+    fprintf(rec->hd_fp, fmt, time_buf, level_strings[rec->level], source_path,
             rec->line);
 }
 
 void no_color_fmt2(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s (%s) %-5s [%s:%d]: ";
+    char display_path[1024];
+    const char *source_path = format_source_path(rec->file, display_path,
+                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, rec->hd_name, level_strings[rec->level],
-            rec->file, rec->line);
+            source_path, rec->line);
 }

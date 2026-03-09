@@ -28,6 +28,19 @@ size_t path_normalize(const char *path, char *buffer, size_t buffer_size)
     return cwk_path_normalize(path, buffer, buffer_size);
 }
 
+bool path_is_absolute(const char *path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+
+    if (uri_is_url(path)) {
+        return true;
+    }
+
+    return cwk_path_is_absolute(path);
+}
+
 // Calculate total length needed for joined paths
 size_t _path_length(const char *base, ...)
 {
