@@ -128,7 +128,7 @@ __attribute__((constructor)) static void init_logger(void)
         .dump_fn = dump_log,
         .fmt_fn = color_fmt1,
         .fp = DEFAULT_STREAM,
-        .level = LOG_TRACE,
+        .level = DEFAULT_LEVEL,
         .quiet = false,
         .date_fmt = DEFAULT_DATE_FORMAT1,
     };
