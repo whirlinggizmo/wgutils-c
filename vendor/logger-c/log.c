@@ -310,7 +310,7 @@ void log_set_fmt_fn(const char *name, log_fmt_fn value)
 
 void log_set_level(const char *name, size_t value)
 {
-    printf("Setting level to %zu\n", value);
+    //printf("Setting log level to %zu\n", value);
     _log_set_member(name, size_t, level, value);
 }
 
