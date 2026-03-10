@@ -2,6 +2,7 @@
 
 #include "fetch_url.h"
 #include <curl/curl.h>
+#include "logger/log.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,7 +61,7 @@ fetch_url_result_t fetch_url(const char *url, int timeout_ms)
     CURL *curl = curl_easy_init();
     if (!curl)
     {
-        fprintf(stderr, "Error initializing curl\n");
+        log_error("FETCH_URL: Error initializing curl");
         result.code = -1;
         return result;
     }
@@ -112,6 +113,7 @@ fetch_url_result_t fetch_url(const char *url, int timeout_ms)
     }
     else
     {
+        log_warn("FETCH_URL: curl_easy_perform() failed for '%s': %s", url, curl_easy_strerror(res));
         result.data = NULL;
         result.size = 0;
         result.code = 500; // internal server error?

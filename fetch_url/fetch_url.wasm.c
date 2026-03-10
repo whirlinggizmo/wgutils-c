@@ -1,6 +1,7 @@
 #ifdef EMSCRIPTEN
 
 #include "fetch_url.h"
+#include "logger/log.h"
 #include <emscripten/fetch.h>
 #include <emscripten.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ void fetch_success(emscripten_fetch_t *fetch)
     context->data = (char *)malloc(fetch->numBytes + 1);
     if (context->data == NULL)
     {
-        printf("Failed to allocate memory for fetched content.\n");
+        log_error("FETCH_URL: Failed to allocate memory for fetched content.");
         context->data = NULL; // Indicate failure
         context->size = 0;
         context->error = -1;
@@ -44,7 +45,7 @@ void fetch_success(emscripten_fetch_t *fetch)
     context->size = fetch->numBytes;
     context->error = 0; 
     context->code = fetch->status;
-    printf("Fetched %llu bytes from %s\n", fetch->numBytes, fetch->url);
+    log_debug("FETCH_URL: Fetched %llu bytes from %s", fetch->numBytes, fetch->url);
 
     context->completed = true; // Mark the fetch as complete
 
@@ -57,7 +58,7 @@ void fetch_error(emscripten_fetch_t *fetch)
 {
     fetch_context_t *context = (fetch_context_t *)fetch->userData;
 
-    printf("Fetch failed: HTTP status %d, URL: %s\n", fetch->status, fetch->url);
+    log_warn("FETCH_URL: Fetch failed: HTTP status %d, URL: %s", fetch->status, fetch->url);
     context->data = NULL; // Indicate failure
     context->size = 0;
     // if there was a network error, return it  (or -2 if we don't know)
@@ -96,7 +97,7 @@ fetch_url_result_t fetch_url(const char *url, int timeout_ms)
     attr.userData = &context;
 
     // Start the fetch
-    printf("Fetching URL: %s...\n", url);
+    log_debug("FETCH_URL: Fetching URL: %s", url);
     emscripten_fetch(&attr, url);
 
     // Wait for the fetch to complete with timeout
@@ -110,7 +111,7 @@ fetch_url_result_t fetch_url(const char *url, int timeout_ms)
     // Check if the fetch timed out
     if (!context.completed)
     {
-        printf("Fetch timed out after %d ms: %s\n", timeout_ms, url);
+        log_warn("FETCH_URL: Fetch timed out after %d ms: %s", timeout_ms, url);
         result.code = 500;
         return result;
     }

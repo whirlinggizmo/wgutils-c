@@ -18,6 +18,8 @@ typedef enum log_level {
  */
 void log_set_log_level(size_t level);
 void log_set_quiet_mode(bool quiet);
+void log_message(int level, const char *file, int line, const char *msg_fmt, ...);
+void log_message_simple(int level, const char *msg_fmt, ...);
 
 /* Vendor logger entrypoint, intentionally re-declared here so consumers
  * can log without including vendor headers (avoids enum-name collisions).
@@ -25,11 +27,11 @@ void log_set_quiet_mode(bool quiet);
 void _log_message(int level, const char *file, int line, const char *msg_fmt, ...);
 
 /* Keep call sites readable while maintaining prefixed level constants. */
-#define log_trace(...) _log_message(LOG_LEVEL_TRACE, __FILE__, __LINE__, __VA_ARGS__)
-#define log_debug(...) _log_message(LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
-#define log_info(...) _log_message(LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
-#define log_warn(...) _log_message(LOG_LEVEL_WARN, __FILE__, __LINE__, __VA_ARGS__)
-#define log_error(...) _log_message(LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
-#define log_fatal(...) _log_message(LOG_LEVEL_FATAL, __FILE__, __LINE__, __VA_ARGS__)
+#define log_trace(...) log_message(LOG_LEVEL_TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#define log_debug(...) log_message(LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
+#define log_info(...) log_message(LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
+#define log_warn(...) log_message(LOG_LEVEL_WARN, __FILE__, __LINE__, __VA_ARGS__)
+#define log_error(...) log_message(LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__)
+#define log_fatal(...) log_message(LOG_LEVEL_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
 #endif

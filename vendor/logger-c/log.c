@@ -23,7 +23,6 @@
 #include "log.h"
 
 #include <assert.h>
-#include <ctype.h>
 #include <string.h>
 #include <time.h>
 
@@ -55,51 +54,6 @@ static logger_t L = {
     .lock = NULL,
     .count = 0,
 };
-
-static bool path_is_absolute_local(const char *path)
-{
-    if (path == NULL || path[0] == '\0') {
-        return false;
-    }
-
-    // POSIX absolute path.
-    if (path[0] == '/') {
-        return true;
-    }
-
-    // Windows UNC path.
-    if (path[0] == '\\' && path[1] == '\\') {
-        return true;
-    }
-
-    // Windows drive letter path, e.g. C:\foo or C:/foo.
-    if (isalpha((unsigned char)path[0]) && path[1] == ':' &&
-        (path[2] == '\\' || path[2] == '/')) {
-        return true;
-    }
-
-    // URL-like path.
-    return strstr(path, "://") != NULL;
-}
-
-static const char *format_source_path(const char *path, char *buffer,
-                                      size_t buffer_size)
-{
-    if (path == NULL) {
-        return "";
-    }
-
-    if (path_is_absolute_local(path)) {
-        return path;
-    }
-
-    if (buffer_size < 3) {
-        return path;
-    }
-
-    snprintf(buffer, buffer_size, "./%s", path);
-    return buffer;
-}
 
 static void lock(void)
 {
@@ -338,39 +292,27 @@ void dump_log(record_t *rec)
 void color_fmt1(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s %s%-5s\x1b[0m \x1b[90m[%s:%d]:\x1b[0m ";
-    char display_path[1024];
-    const char *source_path = format_source_path(rec->file, display_path,
-                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, level_colors[rec->level],
-            level_strings[rec->level], source_path, rec->line);
+            level_strings[rec->level], rec->file, rec->line);
 }
 
 void color_fmt2(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s (%s) %s%-5s\x1b[0m \x1b[90m[%s:%d]:\x1b[0m ";
-    char display_path[1024];
-    const char *source_path = format_source_path(rec->file, display_path,
-                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, rec->hd_name, level_colors[rec->level],
-            level_strings[rec->level], source_path, rec->line);
+            level_strings[rec->level], rec->file, rec->line);
 }
 
 void no_color_fmt1(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s %-5s [%s:%d]: ";
-    char display_path[1024];
-    const char *source_path = format_source_path(rec->file, display_path,
-                                                 sizeof(display_path));
-    fprintf(rec->hd_fp, fmt, time_buf, level_strings[rec->level], source_path,
+    fprintf(rec->hd_fp, fmt, time_buf, level_strings[rec->level], rec->file,
             rec->line);
 }
 
 void no_color_fmt2(record_t *rec, const char *time_buf)
 {
     static const char *fmt = "%s (%s) %-5s [%s:%d]: ";
-    char display_path[1024];
-    const char *source_path = format_source_path(rec->file, display_path,
-                                                 sizeof(display_path));
     fprintf(rec->hd_fp, fmt, time_buf, rec->hd_name, level_strings[rec->level],
-            source_path, rec->line);
+            rec->file, rec->line);
 }
