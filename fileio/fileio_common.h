@@ -56,6 +56,22 @@ fileio_read_result_t fileio_read_url_common(const char *host, const char *path, 
 bool fileio_exists_common(const char *filename);
 
 /**
+ * Removes a file.
+ *
+ * @param filename The name of the file to remove.
+ * @return 0 on success, or -1 on failure.
+ */
+int fileio_rmfile_common(const char *filename);
+
+/**
+ * Removes a directory.
+ *
+ * @param path The directory path to remove.
+ * @return 0 on success, or -1 on failure.
+ */
+int fileio_rmdir_common(const char *path);
+
+/**
  * Creates directories recursively.
  *
  * @param path The directory path to create.

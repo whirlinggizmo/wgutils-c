@@ -44,6 +44,16 @@ bool fileio_exists(const char *filename)
     return fileio_exists_common(filename);
 }
 
+int fileio_rmfile(const char *filename)
+{
+    return fileio_rmfile_common(filename);
+}
+
+int fileio_rmdir(const char *path)
+{
+    return fileio_rmdir_common(path);
+}
+
 int fileio_mkdir(const char *path)
 {
     return fileio_mkdir_common(path);

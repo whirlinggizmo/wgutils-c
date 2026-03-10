@@ -1,4 +1,4 @@
-#include "uri.h"
+#include "uri/uri.h"
 
 #include <stdio.h>
 #include <string.h>

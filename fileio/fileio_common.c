@@ -5,15 +5,157 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
+#include <ctype.h>
 #include "fetch_url/fetch_url.h"
 
 char fileio_mount_point[FILEIO_MAX_PATH_LENGTH];
 
 bool fileio_mount_point_initialized = false;
 static const int fileio_ready_wait_timeout_ms = 2000;
+
+static int fileio_normalize_relpath(const char *input, char *output, size_t output_size, bool allow_empty)
+{
+    char temp[FILEIO_MAX_PATH_LENGTH * 2];
+    size_t marks[FILEIO_MAX_PATH_LENGTH];
+    size_t depth = 0;
+    size_t out_len = 0;
+    const char *p = NULL;
+
+    if (!input || !output || output_size == 0)
+    {
+        return -1;
+    }
+
+    if (strlen(input) >= sizeof(temp))
+    {
+        return -1;
+    }
+
+    strcpy(temp, input);
+
+    // Absolute paths are not allowed in fileio relative-path APIs.
+    if (temp[0] == '/' || temp[0] == '\\')
+    {
+        return -1;
+    }
+
+    // Block Windows drive forms (e.g. C:\, C:/, C:foo) and colon usage.
+    if ((isalpha((unsigned char)temp[0]) && temp[1] == ':') || strchr(temp, ':') != NULL)
+    {
+        return -1;
+    }
+
+    // Normalize separators to a single style before lexical normalization.
+    for (size_t i = 0; temp[i] != '\0'; i++)
+    {
+        if (temp[i] == '\\')
+        {
+            temp[i] = '/';
+        }
+    }
+
+    output[0] = '\0';
+    p = temp;
+
+    while (*p != '\0')
+    {
+        const char *start = NULL;
+        size_t seg_len = 0;
+
+        while (*p == '/')
+        {
+            p++;
+        }
+        if (*p == '\0')
+        {
+            break;
+        }
+
+        start = p;
+        while (*p != '\0' && *p != '/')
+        {
+            p++;
+        }
+        seg_len = (size_t)(p - start);
+
+        if (seg_len == 0 || (seg_len == 1 && start[0] == '.'))
+        {
+            continue;
+        }
+
+        if (seg_len == 2 && start[0] == '.' && start[1] == '.')
+        {
+            if (depth == 0)
+            {
+                return -1;
+            }
+            depth--;
+            out_len = marks[depth];
+            output[out_len] = '\0';
+            continue;
+        }
+
+        if (depth >= FILEIO_MAX_PATH_LENGTH)
+        {
+            return -1;
+        }
+
+        marks[depth] = out_len;
+        depth++;
+
+        if (out_len != 0)
+        {
+            if (out_len + 1 >= output_size)
+            {
+                return -1;
+            }
+            output[out_len++] = '/';
+        }
+
+        if (out_len + seg_len >= output_size)
+        {
+            return -1;
+        }
+
+        memcpy(output + out_len, start, seg_len);
+        out_len += seg_len;
+        output[out_len] = '\0';
+    }
+
+    if (!allow_empty && out_len == 0)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+static int fileio_build_full_path(const char *path, char *full_path, size_t full_path_size, bool allow_empty_relpath)
+{
+    char normalized[FILEIO_MAX_PATH_LENGTH * 2];
+
+    if (fileio_normalize_relpath(path, normalized, sizeof(normalized), allow_empty_relpath) != 0)
+    {
+        log_error("FILEIO: Invalid relative path: '%s'.", path ? path : "(null)");
+        return -1;
+    }
+
+    if (normalized[0] == '\0')
+    {
+        snprintf(full_path, full_path_size, "%s", fileio_mount_point);
+    }
+    else
+    {
+        snprintf(full_path, full_path_size, "%s/%s", fileio_mount_point, normalized);
+    }
+    full_path[full_path_size - 1] = '\0';
+
+    return 0;
+}
 
 /**
  * Initializes the file I/O system.
@@ -98,9 +240,10 @@ int fileio_write_common(const char *filename, void *data, size_t size)
         return -1;
     }
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
-    // prepend the mount point to the filename
-    snprintf(full_path, sizeof(full_path), "%s/%s", fileio_mount_point, filename);
-    full_path[sizeof(full_path) - 1] = '\0';
+    if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
+    {
+        return -1;
+    }
 
     // Ensure the directory exists
     if (fileio_mkdir(filename) != 0) // fileio_mkdir() will prepend the mount point
@@ -154,9 +297,11 @@ fileio_read_result_t fileio_read_common(const char *filename)
     }
 
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
-    // prepend the mount point to the filename
-    snprintf(full_path, sizeof(full_path), "%s/%s", fileio_mount_point, filename);
-    full_path[sizeof(full_path) - 1] = '\0';
+    if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
+    {
+        result.error = -1;
+        return result;
+    }
 
     FILE *file = fopen(full_path, "rb");
     if (!file)
@@ -264,13 +409,78 @@ bool fileio_exists_common(const char *filename)
         return false;
     }
 
-    // prepend the mount point to the filename
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
-    snprintf(full_path, sizeof(full_path), "%s/%s", fileio_mount_point, filename);
-    full_path[sizeof(full_path) - 1] = '\0';
+    if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
+    {
+        return false;
+    }
 
     struct stat buffer;
     return (stat(full_path, &buffer) == 0);
+}
+
+int fileio_rmfile_common(const char *filename)
+{
+    if (!fileio_mount_point_initialized)
+    {
+        log_error("FILEIO: Mount point not initialized.");
+        return -1;
+    }
+    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
+    {
+        log_error("FILEIO: Timed out waiting for fileio readiness before remove.");
+        return -1;
+    }
+
+    char full_path[FILEIO_MAX_PATH_LENGTH * 2];
+    if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
+    {
+        return -1;
+    }
+
+    if (remove(full_path) != 0)
+    {
+        if (errno == ENOENT)
+        {
+            return 0;
+        }
+        log_error("FILEIO: Failed to remove file: %s", full_path);
+        return -1;
+    }
+
+    return 0;
+}
+
+int fileio_rmdir_common(const char *path)
+{
+    if (!fileio_mount_point_initialized)
+    {
+        log_error("FILEIO: Mount point not initialized.");
+        return -1;
+    }
+    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
+    {
+        log_error("FILEIO: Timed out waiting for fileio readiness before rmdir.");
+        return -1;
+    }
+
+    char full_path[FILEIO_MAX_PATH_LENGTH * 2];
+    if (fileio_build_full_path(path, full_path, sizeof(full_path), false) != 0)
+    {
+        return -1;
+    }
+
+    if (rmdir(full_path) != 0)
+    {
+        if (errno == ENOENT)
+        {
+            return 0;
+        }
+        log_error("FILEIO: Failed to remove directory: %s", full_path);
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -288,10 +498,11 @@ int fileio_mkdir_common(const char *path)
         return -1;
     }
 
-    // prepend the mount point to the path
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
-    snprintf(full_path, sizeof(full_path), "%s/%s", fileio_mount_point, path);
-    full_path[sizeof(full_path) - 1] = '\0';
+    if (fileio_build_full_path(path, full_path, sizeof(full_path), true) != 0)
+    {
+        return -1;
+    }
 
     // step through the path, creating directories as needed
     // we start at 1 to skip the first slash

@@ -50,6 +50,22 @@ fileio_read_result_t fileio_read_url(const char *host, const char *path, int tim
 bool fileio_exists(const char *filename);
 
 /**
+ * Removes a file.
+ *
+ * @param filename The name of the file to remove.
+ * @return 0 on success, or -1 on failure.
+ */
+int fileio_rmfile(const char *filename);
+
+/**
+ * Removes a directory.
+ *
+ * @param path The directory path to remove.
+ * @return 0 on success, or -1 on failure.
+ */
+int fileio_rmdir(const char *path);
+
+/**
  * Creates directories recursively.
  *
  * @param path The directory path to create.
