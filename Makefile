@@ -12,9 +12,11 @@ URI_TEST_BIN := /tmp/wgutils_uri_test
 UNIT_SRCS := \
 	$(TEST_DIR)/tests_main.c \
 	$(TEST_DIR)/fetch_url_stub.c \
+	$(TEST_DIR)/event_test.c \
 	$(TEST_DIR)/fileio_test.c \
 	$(TEST_DIR)/lru_cache_test.c \
 	$(TEST_DIR)/path_test.c \
+	$(WGUTILS_DIR)/event/event.c \
 	$(WGUTILS_DIR)/fileio/fileio.c \
 	$(WGUTILS_DIR)/fileio/fileio_common.c \
 	$(WGUTILS_DIR)/logger/log.c \
@@ -22,6 +24,10 @@ UNIT_SRCS := \
 	$(WGUTILS_DIR)/path/path.c \
 	$(WGUTILS_DIR)/uri/uri.c \
 	$(WGUTILS_DIR)/vendor/cwalk/cwalk.c \
+	$(WGUTILS_DIR)/vendor/ee/ee.c \
+	$(WGUTILS_DIR)/vendor/list/list.c \
+	$(WGUTILS_DIR)/vendor/list/list_node.c \
+	$(WGUTILS_DIR)/vendor/list/list_iterator.c \
 	$(WGUTILS_DIR)/vendor/logger-c/log.c
 
 .PHONY: test test_desktop unit_test uri_test

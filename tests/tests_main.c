@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 int fileio_test_run(void);
+int event_test_run(void);
 
 int main(void)
 {
@@ -12,6 +13,13 @@ int main(void)
     int rc = 0;
 
     rc = fileio_test_run();
+    if (rc == 0) {
+        passed++;
+    } else {
+        failed++;
+    }
+
+    rc = event_test_run();
     if (rc == 0) {
         passed++;
     } else {
