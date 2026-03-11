@@ -25,6 +25,12 @@ bool fileio_wait_for_ready(int timeout_ms)
     return true;
 }
 
+int fileio_sync(int timeout_ms)
+{
+    (void)timeout_ms;
+    return 0;
+}
+
 int fileio_write(const char *filename, void *data, size_t size)
 {
     return fileio_write_common(filename, data, size);

@@ -19,6 +19,7 @@ void fileio_deinit(void);
  * @return true if ready, false on timeout.
  */
 bool fileio_wait_for_ready(int timeout_ms);
+int fileio_sync(int timeout_ms);
 
 /**
  * Writes data to a file, ensuring that directories in the path exist.

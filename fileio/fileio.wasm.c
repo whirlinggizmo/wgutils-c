@@ -92,6 +92,48 @@ bool fileio_wait_for_ready(int timeout_ms)
     return false;
 }
 
+int fileio_sync(int timeout_ms)
+{
+    int waited_ms = 0;
+    const int poll_ms = 16;
+
+    if (timeout_ms < 0) {
+        timeout_ms = 0;
+    }
+
+    EM_ASM({
+        Module.fileio_idbfs_last_sync_ok = true;
+    });
+
+    sync_to_idbfs(false, false);
+
+    while (waited_ms <= timeout_ms)
+    {
+        int syncing = EM_ASM_INT({
+            return !!(Module && Module.fileio_idbfs_syncing);
+        });
+        int sync_ok = EM_ASM_INT({
+            return !!(Module && Module.fileio_idbfs_last_sync_ok);
+        });
+
+        if (syncing == 0) {
+            return sync_ok ? 0 : -1;
+        }
+
+        if (waited_ms == timeout_ms) {
+            break;
+        }
+
+        emscripten_sleep(poll_ms);
+        waited_ms += poll_ms;
+        if (waited_ms > timeout_ms) {
+            waited_ms = timeout_ms;
+        }
+    }
+
+    return -1;
+}
+
 /**
  * Checks if the given path is a mount point.
  *
@@ -145,12 +187,16 @@ static void sync_to_idbfs(bool populate_from_idbfs, bool set_ready_on_success)
         var set_ready = ($1 != 0);
         FS.syncfs(populate, function(err) {
             if (err) {
+                Module.fileio_idbfs_last_sync_ok = false;
                 console.error((populate ? "Error restoring from IDBFS: " : "Error syncing to IDBFS: ") + err);
                 if (set_ready) {
                     Module.fileio_idbfs_ready = false;
                 }
-            } else if (set_ready) {
-                Module.fileio_idbfs_ready = true;
+            } else {
+                Module.fileio_idbfs_last_sync_ok = true;
+                if (set_ready) {
+                    Module.fileio_idbfs_ready = true;
+                }
             }
             Module.fileio_idbfs_syncing = false;
         });
