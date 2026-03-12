@@ -4,6 +4,10 @@
 #include <raylib.h>
 #include <math.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // In-place vector operations (modifies first argument)
 static inline void vec3_set(Vector3* v, float x, float y, float z) {
     v->x = x;
@@ -81,5 +85,9 @@ static inline void vec3_normalize(Vector3* v) {
 // Vector3Normalize() - Get normalized vector (returns new vector)
 // Vector3Lerp() - Linear interpolation (returns new vector)
 // See raymath.h for the complete list
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __V3_H__

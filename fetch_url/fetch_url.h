@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FETCH_URL_MAX_PATH_LENGTH 256
 typedef struct
 {
@@ -17,5 +21,9 @@ typedef struct
 fetch_url_result_t fetch_url(const char *url, int timeout_ms);
 
 fetch_url_result_t fetch_url_with_path(const char* host_url, const char* relative_path, int timeout_ms);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // FETCH_URL_H

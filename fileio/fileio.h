@@ -6,6 +6,10 @@
 #include <stdbool.h>
 #include "fileio_common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int fileio_init(const char *mount_point);
 void fileio_deinit(void);
 
@@ -73,5 +77,9 @@ int fileio_rmdir(const char *path);
  * @return 0 on success, or -1 on failure.
  */
 int fileio_mkdir(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // FILEIO_H

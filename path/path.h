@@ -4,6 +4,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 size_t path_join(const char *base, const char *path, char *buffer, size_t buffer_size);
 
 size_t path_normalize(const char *path, char *buffer, size_t buffer_size);
@@ -29,5 +33,9 @@ size_t _path_join(const char *base, const char *path, char *buffer, size_t buffe
 char* path_get_filename(const char *path);
  
 char* path_get_extension(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PATH_H

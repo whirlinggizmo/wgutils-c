@@ -1,7 +1,14 @@
+#ifndef WGUTILS_VENDOR_EE_H
+#define WGUTILS_VENDOR_EE_H
+
 #include "../list/list.h"
 
 #ifndef strdup
 extern char *strdup(const char *str);
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #ifndef EE_NEW_LISTENER
@@ -165,3 +172,9 @@ list_t* /*<ee_handler_t>*/ ee_listeners ( ee_t* self, const char* name);
  * @return number of listeners
  */
 int ee_listener_count                  ( ee_t* self, const char* name);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* WGUTILS_VENDOR_EE_H */

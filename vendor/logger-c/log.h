@@ -13,6 +13,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #define __LOGGER_HAS_TYPEOF 1
 #else
@@ -93,5 +97,9 @@ void color_fmt1(record_t *rec, const char *time_buf);
 void color_fmt2(record_t *rec, const char *time_buf);
 void no_color_fmt1(record_t *rec, const char *time_buf);
 void no_color_fmt2(record_t *rec, const char *time_buf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LOG_H */

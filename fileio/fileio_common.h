@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #define FILEIO_MAX_PATH_LENGTH 256
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern char fileio_mount_point[FILEIO_MAX_PATH_LENGTH];
 extern bool fileio_mount_point_initialized;
 
@@ -78,5 +82,9 @@ int fileio_rmdir_common(const char *path);
  * @return 0 on success, or -1 on failure.
  */
 int fileio_mkdir_common(const char *path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // FILEIO_COMMON_H

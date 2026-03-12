@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define TEST_ASSERT(cond) \
     do { \
         if (!(cond)) { \
@@ -11,5 +15,9 @@
             return 1; \
         } \
     } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // TEST_COMMON_H
