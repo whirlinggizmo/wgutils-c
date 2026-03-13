@@ -2,156 +2,166 @@
 
 #include "fetch_url.h"
 #include "logger/log.h"
+
 #include <emscripten/fetch.h>
-#include <emscripten.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#define FETCH_SLEEP_MS 1 // Sleep interval in milliseconds
-
-// Context to store fetch results
 typedef struct
 {
-    char *data;     // Pointer to the fetched content
-    size_t size;    // Size of the fetched content
-    bool completed; // Flag to indicate if the fetch is complete
-    int error;      // Error code if any
-    int code;       // http code
+    fetch_url_op_t *owner;
 } fetch_context_t;
 
-// Success callback
-void fetch_success(emscripten_fetch_t *fetch)
+static void fetch_url_result_reset(fetch_url_result_t *result)
+{
+    if (!result)
+    {
+        return;
+    }
+
+    free(result->data);
+    result->data = NULL;
+    result->size = 0;
+    result->code = 0;
+    result->url[0] = '\0';
+}
+
+static void fetch_url_context_destroy(void *impl)
+{
+    fetch_context_t *context = (fetch_context_t *)impl;
+
+    free(context);
+}
+
+static void fetch_success(emscripten_fetch_t *fetch)
 {
     fetch_context_t *context = (fetch_context_t *)fetch->userData;
+    fetch_url_op_t *op = context ? context->owner : NULL;
 
-    // Allocate memory for the fetched content
-    context->data = (char *)malloc(fetch->numBytes + 1);
-    if (context->data == NULL)
+    if (!op)
     {
-        log_error("FETCH_URL: Failed to allocate memory for fetched content.");
-        context->data = NULL; // Indicate failure
-        context->size = 0;
-        context->error = -1;
-        context->code = 500;
-        context->completed = true; // Mark the fetch as complete
         emscripten_fetch_close(fetch);
         return;
     }
 
-    memcpy(context->data, fetch->data, fetch->numBytes);
-    context->data[fetch->numBytes] = '\0'; // Null-terminate the string
-    context->size = fetch->numBytes;
-    context->error = 0; 
-    context->code = fetch->status;
+    op->result.data = (char *)malloc(fetch->numBytes + 1);
+    if (op->result.data == NULL)
+    {
+        log_error("FETCH_URL: Failed to allocate memory for fetched content.");
+        op->result.code = 500;
+        wg_op_complete(&op->op, op->result.code);
+        emscripten_fetch_close(fetch);
+        return;
+    }
+
+    memcpy(op->result.data, fetch->data, fetch->numBytes);
+    op->result.data[fetch->numBytes] = '\0';
+    op->result.size = fetch->numBytes;
+    op->result.code = fetch->status;
     log_debug("FETCH_URL: Fetched %llu bytes from %s", fetch->numBytes, fetch->url);
-
-    context->completed = true; // Mark the fetch as complete
-
-    // fetch_close does the freeing for us, so we don't need to do it here.
+    wg_op_complete(&op->op, op->result.code);
     emscripten_fetch_close(fetch);
 }
 
-// Error callback
-void fetch_error(emscripten_fetch_t *fetch)
+static void fetch_error(emscripten_fetch_t *fetch)
 {
     fetch_context_t *context = (fetch_context_t *)fetch->userData;
+    fetch_url_op_t *op = context ? context->owner : NULL;
 
     log_warn("FETCH_URL: Fetch failed: HTTP status %d, URL: %s", fetch->status, fetch->url);
-    context->data = NULL; // Indicate failure
-    context->size = 0;
-    // if there was a network error, return it  (or -2 if we don't know)
-    context->error = -2;
-    context->code = fetch->status;
-    context->completed = true; // Mark the fetch as complete
+    if (op)
+    {
+        op->result.data = NULL;
+        op->result.size = 0;
+        op->result.code = fetch->status > 0 ? fetch->status : 500;
+        wg_op_complete(&op->op, op->result.code);
+    }
 
     emscripten_fetch_close(fetch);
 }
 
-fetch_url_result_t fetch_url_with_path(const char *host_url, const char *relative_path, int timeout_ms)
+fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
 {
-    char full_url[256];
-    snprintf(full_url, sizeof(full_url), "%s/%s", host_url, relative_path);
-    return fetch_url(full_url, timeout_ms);
-}
-
-// Fetch URL function with timeout support
-fetch_url_result_t fetch_url(const char *url, int timeout_ms)
-{
-    fetch_context_t context = {0};
-    fetch_url_result_t result = {0};
-    context.completed = false;
-
-    // save the url
-    snprintf(result.url, sizeof(result.url), "%s", url);
-
-    // Configure the fetch
+    fetch_url_op_t *op = NULL;
+    fetch_context_t *context = NULL;
     emscripten_fetch_attr_t attr;
+
+    op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));
+    if (!op)
+    {
+        return NULL;
+    }
+
+    context = (fetch_context_t *)calloc(1, sizeof(fetch_context_t));
+    if (!context)
+    {
+        free(op);
+        return NULL;
+    }
+
+    wg_op_init(&op->op, WG_OP_KIND_FETCH_URL, context, fetch_url_context_destroy);
+    context->owner = op;
+    snprintf(op->result.url, sizeof(op->result.url), "%s", url ? url : "");
+
     emscripten_fetch_attr_init(&attr);
     strcpy(attr.requestMethod, "GET");
     attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    // attr.destinationPath = "/scripts/fetch/data.bin"; // Store the fetched content in memory
+    attr.timeoutMSecs = (unsigned int)((timeout_ms > 0) ? timeout_ms : 0);
     attr.onsuccess = fetch_success;
     attr.onerror = fetch_error;
-    attr.userData = &context;
+    attr.userData = context;
 
-    // Start the fetch
-    log_debug("FETCH_URL: Fetching URL: %s", url);
-    emscripten_fetch(&attr, url);
+    log_debug("FETCH_URL: Fetching URL: %s", url ? url : "");
+    emscripten_fetch(&attr, url ? url : "");
+    return op;
+}
 
-    // Wait for the fetch to complete with timeout
-    int elapsed_time = 0;
-    while (!context.completed && elapsed_time < timeout_ms) // TODO: use emscripten attributes to handle timeout
+fetch_url_op_t *fetch_url_with_path_begin(const char *host_url, const char *relative_path, int timeout_ms)
+{
+    char full_url[FETCH_URL_MAX_PATH_LENGTH];
+
+    snprintf(full_url, sizeof(full_url), "%s/%s", host_url ? host_url : "", relative_path ? relative_path : "");
+    return fetch_url_begin(full_url, timeout_ms);
+}
+
+bool fetch_url_poll(fetch_url_op_t *op)
+{
+    return wg_op_is_done(op ? &op->op : NULL);
+}
+
+int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result)
+{
+    if (!op || !result)
     {
-        emscripten_sleep(FETCH_SLEEP_MS); // Non-blocking sleep
-        elapsed_time += FETCH_SLEEP_MS;
+        return -1;
     }
 
-    // Check if the fetch timed out
-    if (!context.completed)
+    if (!wg_op_is_done(&op->op))
     {
-        log_warn("FETCH_URL: Fetch timed out after %d ms: %s", timeout_ms, url);
-        result.code = 500;
-        return result;
+        return 1;
     }
 
-    result.size = context.size;
-    result.code = context.code;
+    *result = op->result;
+    op->result.data = NULL;
+    op->result.size = 0;
+    op->result.code = 0;
+    op->result.url[0] = '\0';
+    return 0;
+}
 
-    if (context.error != 0)
+void fetch_url_op_free(fetch_url_op_t *op)
+{
+    if (!op)
     {
-        result.data = NULL;
-        result.size = 0;
-        result.code = context.error;
-        return result;
-    }
-    else
-    {
-        if (context.size > (SIZE_MAX - 1))
-        {
-            result.code = -1;
-            result.size = 0;
-            free(context.data);
-            return result;
-        }
-
-        // add a null terminator to the end of the data
-        char *ptr = realloc(context.data, context.size + 1);
-        if (!ptr)
-        {
-            result.code = -1;
-            result.size = 0;
-            free(context.data);
-            return result;
-        }
-        ptr[context.size] = '\0';
-        result.size = context.size;
-        result.data = ptr;
-        result.code = context.code;
+        return;
     }
 
-    return result;
+    fetch_url_result_reset(&op->result);
+    wg_op_deinit(&op->op);
+    free(op);
 }
 
 #endif // EMSCRIPTEN

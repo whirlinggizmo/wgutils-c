@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 static void sync_to_idbfs(bool populate_from_idbfs, bool set_ready_on_success);
+static fileio_sync_op_t *fileio_sync_begin_internal(bool populate_from_idbfs);
 
 int fileio_init(const char *mount_point)
 {
@@ -42,9 +43,6 @@ int fileio_init(const char *mount_point)
         FS.mount(IDBFS, { autoPersist: true }, UTF8ToString($0));
     }, fileio_mount_point);
 
-    // Restore the in-memory FS view from persisted IDBFS state.
-    sync_to_idbfs(true, true);
-
     return 0;
 }
 
@@ -56,82 +54,68 @@ void fileio_deinit(void)
         Module.fileio_idbfs_ready = false;
     });
 
-    // Best-effort flush of in-memory FS changes to IDBFS.
-    sync_to_idbfs(false, false);
     fileio_deinit_common();
 }
 
-bool fileio_wait_for_ready(int timeout_ms)
+fileio_sync_op_t *fileio_restore_begin(void)
 {
-    int waited_ms = 0;
-    const int poll_ms = 16;
-    if (timeout_ms < 0) {
-        timeout_ms = 0;
-    }
-
-    while (waited_ms <= timeout_ms)
-    {
-        int ready = EM_ASM_INT({
-            return !!(Module && Module.fileio_idbfs_ready);
-        });
-        if (ready != 0) {
-            return true;
-        }
-
-        if (waited_ms == timeout_ms) {
-            break;
-        }
-
-        emscripten_sleep(poll_ms);
-        waited_ms += poll_ms;
-        if (waited_ms > timeout_ms) {
-            waited_ms = timeout_ms;
-        }
-    }
-
-    return false;
+    return fileio_sync_begin_internal(true);
 }
 
-int fileio_sync(int timeout_ms)
+fileio_sync_op_t *fileio_flush_begin(void)
 {
-    int waited_ms = 0;
-    const int poll_ms = 16;
+    return fileio_sync_begin_internal(false);
+}
 
-    if (timeout_ms < 0) {
-        timeout_ms = 0;
+bool fileio_sync_poll(fileio_sync_op_t *op)
+{
+    if (!op)
+    {
+        return false;
     }
 
-    EM_ASM({
-        Module.fileio_idbfs_last_sync_ok = true;
-    });
-
-    sync_to_idbfs(false, false);
-
-    while (waited_ms <= timeout_ms)
+    if (wg_op_is_done(&op->op))
     {
-        int syncing = EM_ASM_INT({
-            return !!(Module && Module.fileio_idbfs_syncing);
-        });
+        return true;
+    }
+
+    if (EM_ASM_INT({
+        return !!(Module && Module.fileio_idbfs_syncing);
+    }) == 0)
+    {
         int sync_ok = EM_ASM_INT({
             return !!(Module && Module.fileio_idbfs_last_sync_ok);
         });
-
-        if (syncing == 0) {
-            return sync_ok ? 0 : -1;
-        }
-
-        if (waited_ms == timeout_ms) {
-            break;
-        }
-
-        emscripten_sleep(poll_ms);
-        waited_ms += poll_ms;
-        if (waited_ms > timeout_ms) {
-            waited_ms = timeout_ms;
-        }
+        wg_op_complete(&op->op, sync_ok ? 0 : -1);
     }
 
-    return -1;
+    return wg_op_is_done(&op->op);
+}
+
+int fileio_sync_finish(fileio_sync_op_t *op)
+{
+    if (!op)
+    {
+        return -1;
+    }
+
+    if (!fileio_sync_poll(op))
+    {
+        return 1;
+    }
+
+    return wg_op_status(&op->op);
+}
+
+void fileio_sync_op_free(fileio_sync_op_t *op)
+{
+    if (!op)
+    {
+        return;
+    }
+
+    wg_op_deinit(&op->op);
+    free(op);
 }
 
 /**
@@ -203,6 +187,26 @@ static void sync_to_idbfs(bool populate_from_idbfs, bool set_ready_on_success)
     }, populate_from_idbfs ? 1 : 0, set_ready_on_success ? 1 : 0);
 }
 
+static fileio_sync_op_t *fileio_sync_begin_internal(bool populate_from_idbfs)
+{
+    fileio_sync_op_t *op = (fileio_sync_op_t *)calloc(1, sizeof(fileio_sync_op_t));
+
+    if (!op)
+    {
+        return NULL;
+    }
+
+    wg_op_init(&op->op,
+               populate_from_idbfs ? WG_OP_KIND_FILEIO_RESTORE : WG_OP_KIND_FILEIO_FLUSH,
+               NULL,
+               NULL);
+    EM_ASM({
+        Module.fileio_idbfs_last_sync_ok = true;
+    });
+    sync_to_idbfs(populate_from_idbfs, populate_from_idbfs);
+    return op;
+}
+
 /**
  * Creates directories recursively. If the first component is not already mounted,
  * automatically mounts IDBFS at that location.
@@ -238,10 +242,6 @@ fileio_read_result_t fileio_read(const char *filename)
 {
     // Use the shared file_read_common implementation
     return fileio_read_common(filename);
-}
-
-fileio_read_result_t fileio_read_url(const char *host, const char *path, int timeout_ms) {
-    return fileio_read_url_common(host, path, timeout_ms);
 }
 
 /**

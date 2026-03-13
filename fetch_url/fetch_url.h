@@ -2,6 +2,8 @@
 #define FETCH_URL_H
 
 #include <stddef.h>
+#include <stdbool.h>
+#include "async/wg_op.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,11 +18,17 @@ typedef struct
     char url[FETCH_URL_MAX_PATH_LENGTH];
 } fetch_url_result_t;
 
-// Fetch from a URL and return the content as a string (or NULL on failure).
-// The caller is responsible for freeing the returned result.
-fetch_url_result_t fetch_url(const char *url, int timeout_ms);
+typedef struct
+{
+    wg_op_t op;
+    fetch_url_result_t result;
+} fetch_url_op_t;
 
-fetch_url_result_t fetch_url_with_path(const char* host_url, const char* relative_path, int timeout_ms);
+fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms);
+fetch_url_op_t *fetch_url_with_path_begin(const char *host_url, const char *relative_path, int timeout_ms);
+bool fetch_url_poll(fetch_url_op_t *op);
+int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result);
+void fetch_url_op_free(fetch_url_op_t *op);
 
 #ifdef __cplusplus
 }

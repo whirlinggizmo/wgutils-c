@@ -5,25 +5,25 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "fileio_common.h"
+#include "async/wg_op.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct
+{
+    wg_op_t op;
+} fileio_sync_op_t;
+
 int fileio_init(const char *mount_point);
 void fileio_deinit(void);
 
-/**
- * Waits until file I/O backend is ready for cache reads.
- *
- * On wasm this waits for IDBFS restore completion (or timeout).
- * On non-wasm this is an immediate success no-op.
- *
- * @param timeout_ms Max time to wait in milliseconds.
- * @return true if ready, false on timeout.
- */
-bool fileio_wait_for_ready(int timeout_ms);
-int fileio_sync(int timeout_ms);
+fileio_sync_op_t *fileio_restore_begin(void);
+fileio_sync_op_t *fileio_flush_begin(void);
+bool fileio_sync_poll(fileio_sync_op_t *op);
+int fileio_sync_finish(fileio_sync_op_t *op);
+void fileio_sync_op_free(fileio_sync_op_t *op);
 
 /**
  * Writes data to a file, ensuring that directories in the path exist.
@@ -43,8 +43,6 @@ int fileio_write(const char *filename, void *data, size_t size);
  *         The caller is responsible for freeing the returned buffer.
  */
 fileio_read_result_t fileio_read(const char *filename);
-
-fileio_read_result_t fileio_read_url(const char *host, const char *path, int timeout_ms);
 
 /**
  * Checks if a file exists.

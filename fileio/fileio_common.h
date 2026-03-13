@@ -41,17 +41,6 @@ int fileio_write_common(const char *filename, void *data, size_t size);
 fileio_read_result_t fileio_read_common(const char *filename);
 
 /**
- * Reads data from a file.
- *
- * @param host The host to fetch the file from. (e.g. "https://example.com")
- * @param path The path to the file on the host. (e.g. "/path/to/file.txt")
- * @param timeout_ms The timeout in milliseconds for the fetch operation.
- * @return A dynamically allocated buffer containing the file contents, or NULL on failure.
- *         The caller is responsible for freeing the returned buffer.
- */
-fileio_read_result_t fileio_read_url_common(const char *host, const char *path, int timeout_ms);
-
-/**
  * Checks if a file exists.
  *
  * @param filename The name of the file to check.

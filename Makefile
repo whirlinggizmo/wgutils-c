@@ -16,6 +16,7 @@ UNIT_SRCS := \
 	$(TEST_DIR)/fileio_test.c \
 	$(TEST_DIR)/lru_cache_test.c \
 	$(TEST_DIR)/path_test.c \
+	$(WGUTILS_DIR)/async/wg_op.c \
 	$(WGUTILS_DIR)/event/event.c \
 	$(WGUTILS_DIR)/fileio/fileio.c \
 	$(WGUTILS_DIR)/fileio/fileio_common.c \

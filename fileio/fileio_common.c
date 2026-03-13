@@ -10,12 +10,10 @@
 #include <limits.h>
 #include <stdint.h>
 #include <ctype.h>
-#include "fetch_url/fetch_url.h"
 
 char fileio_mount_point[FILEIO_MAX_PATH_LENGTH];
 
 bool fileio_mount_point_initialized = false;
-static const int fileio_ready_wait_timeout_ms = 2000;
 
 static int fileio_normalize_relpath(const char *input, char *output, size_t output_size, bool allow_empty)
 {
@@ -234,11 +232,6 @@ int fileio_write_common(const char *filename, void *data, size_t size)
         log_error("FILEIO: Mount point not initialized.");
         return -1;
     }
-    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
-    {
-        log_error("FILEIO: Timed out waiting for fileio readiness before write.");
-        return -1;
-    }
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
     if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
     {
@@ -289,13 +282,6 @@ fileio_read_result_t fileio_read_common(const char *filename)
         result.error = -1;
         return result;
     }
-    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
-    {
-        log_error("FILEIO: Timed out waiting for fileio readiness before read.");
-        result.error = -1;
-        return result;
-    }
-
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
     if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
     {
@@ -363,37 +349,6 @@ fileio_read_result_t fileio_read_common(const char *filename)
     return result;
 }
 
-fileio_read_result_t fileio_read_url_common(const char *host, const char *path, int timeout_ms) {
-    log_debug("FILEIO: Fetching %s/%s", host, path);
-    fetch_url_result_t result = fetch_url_with_path(host, path, timeout_ms);
-
-    // if unsuccessful, return an empty fileio_read_result_t
-    if (result.code != 200)
-    {
-        log_error("FILEIO: Failed to fetch file from %s/%s: %d", host, path, result.code);
-        if (result.data)
-        {
-            free(result.data);
-        }
-        // return an empty fileio_read_result_t
-        fileio_read_result_t read_result = {0};
-        read_result.error = result.code;
-        read_result.size = 0;
-        read_result.data = NULL;
-        return read_result;
-    }
-
-    // success!
-    // write the file to disk
-    if (fileio_write(path, result.data, result.size) != 0)
-    {
-        log_error("FILEIO: Failed to persist fetched file to cache: %s", path);
-    }
-    free(result.data);
-
-    return fileio_read(path);
-}
-
 /**
  * Checks if a file exists.
  *
@@ -426,12 +381,6 @@ int fileio_rmfile_common(const char *filename)
         log_error("FILEIO: Mount point not initialized.");
         return -1;
     }
-    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
-    {
-        log_error("FILEIO: Timed out waiting for fileio readiness before remove.");
-        return -1;
-    }
-
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
     if (fileio_build_full_path(filename, full_path, sizeof(full_path), false) != 0)
     {
@@ -458,12 +407,6 @@ int fileio_rmdir_common(const char *path)
         log_error("FILEIO: Mount point not initialized.");
         return -1;
     }
-    if (!fileio_wait_for_ready(fileio_ready_wait_timeout_ms))
-    {
-        log_error("FILEIO: Timed out waiting for fileio readiness before rmdir.");
-        return -1;
-    }
-
     char full_path[FILEIO_MAX_PATH_LENGTH * 2];
     if (fileio_build_full_path(path, full_path, sizeof(full_path), false) != 0)
     {
