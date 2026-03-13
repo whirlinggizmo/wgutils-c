@@ -1,7 +1,7 @@
 #ifdef EMSCRIPTEN
 
 #include "websocket.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 
 #include <emscripten/websocket.h>
 #include <stdlib.h>

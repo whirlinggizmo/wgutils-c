@@ -1,7 +1,7 @@
 #ifdef EMSCRIPTEN
 
 #include "fetch_url.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 
 #include <emscripten/fetch.h>
 #include <stdbool.h>

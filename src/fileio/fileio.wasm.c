@@ -2,7 +2,7 @@
 
 #include "fileio.h"
 #include "fileio_common.h"
-#include "logger/log.h"
+#include "logger/logger.h"
 #include <emscripten.h>
 #include <stdbool.h>
 #include <string.h>

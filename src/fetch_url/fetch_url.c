@@ -2,7 +2,7 @@
 
 #include "fetch_url.h"
 #include <curl/curl.h>
-#include "logger/log.h"
+#include "logger/logger.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
