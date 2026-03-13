@@ -21,8 +21,9 @@ typedef struct
 } websocket_callbacks_t;
 
 websocket_t *websocket_create(const char *url,
-                               const websocket_callbacks_t *callbacks,
-                               void *user_data);
+                              const websocket_callbacks_t *callbacks,
+                              void *user_data);
+void websocket_poll(websocket_t *ws);
 void websocket_destroy(websocket_t *ws);
 int websocket_send_text(websocket_t *ws, const char *text);
 int websocket_send_binary(websocket_t *ws, const void *data, size_t len);

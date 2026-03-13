@@ -78,8 +78,8 @@ static EM_BOOL ws_cb_on_message(int event_type, const EmscriptenWebSocketMessage
 }
 
 websocket_t *websocket_create(const char *url,
-                                     const websocket_callbacks_t *callbacks,
-                                     void *user_data)
+                              const websocket_callbacks_t *callbacks,
+                              void *user_data)
 {
     websocket_t *ws = NULL;
     EmscriptenWebSocketCreateAttributes attrs;
@@ -96,7 +96,6 @@ websocket_t *websocket_create(const char *url,
     snprintf(ws->url, sizeof(ws->url), "%s", url);
     ws->connected = false;
     ws->user_data = user_data;
-
     if (callbacks != NULL) {
         ws->callbacks = *callbacks;
     }
@@ -118,6 +117,11 @@ websocket_t *websocket_create(const char *url,
 
     log_debug("WEBSOCKET: Connecting to %s...", url);
     return ws;
+}
+
+void websocket_poll(websocket_t *ws)
+{
+    (void)ws;
 }
 
 void websocket_destroy(websocket_t *ws)
