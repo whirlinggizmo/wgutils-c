@@ -71,7 +71,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
+fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));
     fetch_url_result_t *stored_result = NULL;
@@ -166,12 +166,12 @@ fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
     return op;
 }
 
-fetch_url_op_t *fetch_url_with_path_begin(const char *host_url, const char *relative_path, int timeout_ms)
+fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms)
 {
     char full_url[FETCH_URL_MAX_PATH_LENGTH];
 
     snprintf(full_url, sizeof(full_url), "%s/%s", host_url ? host_url : "", relative_path ? relative_path : "");
-    return fetch_url_begin(full_url, timeout_ms);
+    return fetch_url_async(full_url, timeout_ms);
 }
 
 bool fetch_url_poll(fetch_url_op_t *op)

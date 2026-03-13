@@ -83,7 +83,7 @@ static void fetch_error(emscripten_fetch_t *fetch)
     emscripten_fetch_close(fetch);
 }
 
-fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
+fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = NULL;
     fetch_context_t *context = NULL;
@@ -119,12 +119,12 @@ fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
     return op;
 }
 
-fetch_url_op_t *fetch_url_with_path_begin(const char *host_url, const char *relative_path, int timeout_ms)
+fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms)
 {
     char full_url[FETCH_URL_MAX_PATH_LENGTH];
 
     snprintf(full_url, sizeof(full_url), "%s/%s", host_url ? host_url : "", relative_path ? relative_path : "");
-    return fetch_url_begin(full_url, timeout_ms);
+    return fetch_url_async(full_url, timeout_ms);
 }
 
 bool fetch_url_poll(fetch_url_op_t *op)

@@ -24,8 +24,8 @@ typedef struct
     fetch_url_result_t result;
 } fetch_url_op_t;
 
-fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms);
-fetch_url_op_t *fetch_url_with_path_begin(const char *host_url, const char *relative_path, int timeout_ms);
+fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms);
+fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms);
 bool fetch_url_poll(fetch_url_op_t *op);
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result);
 void fetch_url_op_free(fetch_url_op_t *op);

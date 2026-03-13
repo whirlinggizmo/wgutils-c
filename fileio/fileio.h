@@ -19,8 +19,8 @@ typedef struct
 int fileio_init(const char *mount_point);
 void fileio_deinit(void);
 
-fileio_sync_op_t *fileio_restore_begin(void);
-fileio_sync_op_t *fileio_flush_begin(void);
+fileio_sync_op_t *fileio_restore_async(void);
+fileio_sync_op_t *fileio_flush_async(void);
 bool fileio_sync_poll(fileio_sync_op_t *op);
 int fileio_sync_finish(fileio_sync_op_t *op);
 void fileio_sync_op_free(fileio_sync_op_t *op);

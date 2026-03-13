@@ -37,7 +37,7 @@ int fileio_test_run(void)
     cleanup_mount();
 
     TEST_ASSERT(fileio_init(FILEIO_TEST_MOUNT) == 0);
-    restore_op = fileio_restore_begin();
+    restore_op = fileio_restore_async();
     TEST_ASSERT(restore_op != NULL);
     TEST_ASSERT(fileio_sync_poll(restore_op) == true);
     TEST_ASSERT(fileio_sync_finish(restore_op) == 0);
@@ -70,7 +70,7 @@ int fileio_test_run(void)
     TEST_ASSERT(fileio_rmfile("missing/file.bin") == 0);
     TEST_ASSERT(fileio_rmdir("missing/dir") == 0);
 
-    flush_op = fileio_flush_begin();
+    flush_op = fileio_flush_async();
     TEST_ASSERT(flush_op != NULL);
     TEST_ASSERT(fileio_sync_poll(flush_op) == true);
     TEST_ASSERT(fileio_sync_finish(flush_op) == 0);

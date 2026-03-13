@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
+fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 {
     fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));
 
@@ -20,7 +20,7 @@ fetch_url_op_t *fetch_url_begin(const char *url, int timeout_ms)
     return op;
 }
 
-fetch_url_op_t *fetch_url_with_path_begin(const char *host_url,
+fetch_url_op_t *fetch_url_with_path_async(const char *host_url,
                                           const char *relative_path,
                                           int timeout_ms)
 {

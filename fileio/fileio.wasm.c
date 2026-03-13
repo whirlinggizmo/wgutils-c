@@ -57,12 +57,12 @@ void fileio_deinit(void)
     fileio_deinit_common();
 }
 
-fileio_sync_op_t *fileio_restore_begin(void)
+fileio_sync_op_t *fileio_restore_async(void)
 {
     return fileio_sync_begin_internal(true);
 }
 
-fileio_sync_op_t *fileio_flush_begin(void)
+fileio_sync_op_t *fileio_flush_async(void)
 {
     return fileio_sync_begin_internal(false);
 }

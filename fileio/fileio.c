@@ -33,12 +33,12 @@ void fileio_deinit(void)
     fileio_deinit_common();
 }
 
-fileio_sync_op_t *fileio_restore_begin(void)
+fileio_sync_op_t *fileio_restore_async(void)
 {
     return fileio_sync_op_done(WG_OP_KIND_FILEIO_RESTORE, 0);
 }
 
-fileio_sync_op_t *fileio_flush_begin(void)
+fileio_sync_op_t *fileio_flush_async(void)
 {
     return fileio_sync_op_done(WG_OP_KIND_FILEIO_FLUSH, 0);
 }
