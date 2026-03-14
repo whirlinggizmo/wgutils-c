@@ -158,6 +158,11 @@ json_value_t *json_create_array(void)
     return (json_value_t *)cJSON_CreateArray();
 }
 
+json_value_t *json_create_number(double number)
+{
+    return (json_value_t *)cJSON_CreateNumber(number);
+}
+
 json_value_t *json_add_number_to_object(json_value_t *object, const char *name, double number)
 {
     return (json_value_t *)cJSON_AddNumberToObject(json_impl(object), name, number);

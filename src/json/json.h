@@ -36,6 +36,7 @@ const json_value_t *json_array_get(const json_value_t *array, int index);
 
 json_value_t *json_create_object(void);
 json_value_t *json_create_array(void);
+json_value_t *json_create_number(double number);
 json_value_t *json_add_number_to_object(json_value_t *object, const char *name, double number);
 json_value_t *json_add_bool_to_object(json_value_t *object, const char *name, bool boolean);
 json_value_t *json_add_string_to_object(json_value_t *object, const char *name, const char *string);
