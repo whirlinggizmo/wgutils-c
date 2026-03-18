@@ -200,9 +200,13 @@ $(OBJ_WASM_DIR)/%.o: $(WGUTILS_SRC_DIR)/%.c
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(CC_WASM) $(WASM_PLATFORM_CFLAGS) $(CFLAGS) $(WASM_INCLUDES) -c $< -o $@
 
-$(DESKTOP_LIB): $(DESKTOP_OBJS)
+$(DESKTOP_LIB): $(DESKTOP_OBJS) $(CURL_STATIC_LIB)
 	@mkdir -p $(OUT_DIR)
-	$(AR) rcs $@ $(DESKTOP_OBJS)
+	@mkdir -p $(OBJ_DESKTOP_DIR)/.curl_unpack
+	@echo "[desktop] Unpacking libcurl.a into libwgutils.a..."
+	cd $(OBJ_DESKTOP_DIR)/.curl_unpack && $(AR) x $(abspath $(CURL_STATIC_LIB))
+	$(AR) rcs $@ $(DESKTOP_OBJS) $(OBJ_DESKTOP_DIR)/.curl_unpack/*.o
+	@rm -rf $(OBJ_DESKTOP_DIR)/.curl_unpack
 
 $(WASM_LIB): $(WASM_OBJS)
 	@mkdir -p $(OUT_DIR)
