@@ -66,7 +66,6 @@ OBJ_DESKTOP_DIR := $(OBJ_DIR)/desktop
 OBJ_WASM_DIR := $(OBJ_DIR)/wasm
 DESKTOP_LIB := $(OUT_DIR)/libwgutils.a
 WASM_LIB := $(OUT_DIR)/libwgutils.wasm.a
-DESKTOP_LINK_FLAGS_FILE := $(OUT_DIR)/libwgutils.desktop.link
 
 PUBLIC_HEADERS := \
 	$(WGUTILS_SRC_DIR)/async/wg_op.h \
@@ -186,10 +185,6 @@ $(CURL_STATIC_LIB): $(CURL_SRC_DIR)/configure
 	cd "$(CURL_BUILD_DIR)" && "$(CURL_SRC_DIR)/configure" $(CURL_CONFIGURE_ARGS)
 	$(MAKE) -C "$(CURL_BUILD_DIR)"
 	$(MAKE) -C "$(CURL_BUILD_DIR)" install
-
-$(DESKTOP_LINK_FLAGS_FILE): $(CURL_STATIC_LIB) | $(OUT_DIR)
-	@mkdir -p $(OUT_DIR)
-	printf '%s\n' "$$($(CURL_CONFIG) --static-libs)" > "$@"
 
 $(OBJ_DESKTOP_DIR)/%.o: $(WGUTILS_SRC_DIR)/%.c | $(CURL_STATIC_LIB)
 	@mkdir -p $(dir $@)
