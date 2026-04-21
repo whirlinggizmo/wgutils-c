@@ -12,7 +12,7 @@ EMAR ?= emar
 EM_CACHE_DIR ?= $(abspath $(ROOT_DIR)/.emcache)
 EM_ENV := EM_CACHE=$(EM_CACHE_DIR)
 
-CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -O2
+CFLAGS ?= -Wall -Wextra -fdiagnostics-color=always -O2 -fPIC
 WASM_PLATFORM_CFLAGS ?= -DPLATFORM_WEB
 WASM_COMMON_LDFLAGS ?= \
 	-s WASM=1 \
