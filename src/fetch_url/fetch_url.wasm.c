@@ -164,4 +164,15 @@ void fetch_url_op_free(fetch_url_op_t *op)
     free(op);
 }
 
+int fetch_url_head(const char *url, int timeout_ms)
+{
+    /* TODO: implement async HEAD using emscripten_fetch with requestMethod="HEAD"
+     * and integrate a FETCHING_HEAD state into the loader task state machine.
+     * This would also enable download progress tracking (Content-Length from HEAD
+     * response used to report progress during the subsequent GET). */
+    (void)url;
+    (void)timeout_ms;
+    return 0;
+}
+
 #endif // EMSCRIPTEN

@@ -104,10 +104,17 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
         return op;
     }
 
+    // NOLINTBEGIN(bugprone-sizeof-expression) -- curl typecheck macros use sizeof internally
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&context);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, (long)CURLSSLOPT_NO_REVOKE);
+    curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
+    // NOLINTEND(bugprone-sizeof-expression)
 
     res = curl_easy_perform(curl);
     if (res == CURLE_OK)
@@ -206,6 +213,44 @@ int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result)
     stored_result->code = 0;
     stored_result->url[0] = '\0';
     return 0;
+}
+
+int fetch_url_head(const char *url, int timeout_ms)
+{
+    CURL *curl = NULL;
+    CURLcode res;
+    long http_code = 0;
+
+    if (!url || url[0] == '\0')
+    {
+        return -1;
+    }
+
+    curl = curl_easy_init();
+    if (!curl)
+    {
+        return -1;
+    }
+
+    // NOLINTBEGIN(bugprone-sizeof-expression) -- curl typecheck macros use sizeof internally
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, (long)CURLSSLOPT_NO_REVOKE);
+    curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
+    // NOLINTEND(bugprone-sizeof-expression)
+
+    res = curl_easy_perform(curl);
+    if (res == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    }
+    curl_easy_cleanup(curl);
+
+    return (res == CURLE_OK && http_code == 200) ? 0 : -1;
 }
 
 void fetch_url_op_free(fetch_url_op_t *op)
