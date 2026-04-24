@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 
 typedef struct
 {
@@ -251,6 +252,51 @@ int fetch_url_head(const char *url, int timeout_ms)
     curl_easy_cleanup(curl);
 
     return (res == CURLE_OK && http_code == 200) ? 0 : -1;
+}
+
+float fetch_url_ping(const char *url, int timeout_ms)
+{
+    CURL *curl = NULL;
+    CURLcode res;
+    struct timespec start = {0};
+    struct timespec end = {0};
+    double elapsed_ms = -1.0;
+
+    if (!url || url[0] == '\0')
+    {
+        return -1.0f;
+    }
+
+    curl = curl_easy_init();
+    if (!curl)
+    {
+        return -1.0f;
+    }
+
+    // NOLINTBEGIN(bugprone-sizeof-expression) -- curl typecheck macros use sizeof internally
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, (long)CURLSSLOPT_NO_REVOKE);
+    curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
+    // NOLINTEND(bugprone-sizeof-expression)
+
+    (void)clock_gettime(CLOCK_MONOTONIC, &start);
+    res = curl_easy_perform(curl);
+    (void)clock_gettime(CLOCK_MONOTONIC, &end);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK)
+    {
+        return -1.0f;
+    }
+
+    elapsed_ms = ((double)(end.tv_sec - start.tv_sec) * 1000.0) +
+                 ((double)(end.tv_nsec - start.tv_nsec) / 1000000.0);
+    return (float)(elapsed_ms >= 0.0 ? elapsed_ms : 0.0);
 }
 
 void fetch_url_op_free(fetch_url_op_t *op)

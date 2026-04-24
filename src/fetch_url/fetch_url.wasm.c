@@ -175,4 +175,12 @@ int fetch_url_head(const char *url, int timeout_ms)
     return 0;
 }
 
+float fetch_url_ping(const char *url, int timeout_ms)
+{
+    /* Browser fetch is async-only here; this synchronous probe API is desktop-only. */
+    (void)url;
+    (void)timeout_ms;
+    return -1.0f;
+}
+
 #endif // EMSCRIPTEN

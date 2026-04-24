@@ -30,6 +30,7 @@ bool fetch_url_poll(fetch_url_op_t *op);
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result);
 void fetch_url_op_free(fetch_url_op_t *op);
 int fetch_url_head(const char *url, int timeout_ms);
+float fetch_url_ping(const char *url, int timeout_ms);
 
 #ifdef __cplusplus
 }
