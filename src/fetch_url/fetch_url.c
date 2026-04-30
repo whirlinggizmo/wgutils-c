@@ -72,6 +72,26 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
+static int fetch_url_join_path(char *buffer,
+                               size_t buffer_size,
+                               const char *host_url,
+                               const char *relative_path)
+{
+    int written = 0;
+
+    if (!buffer || buffer_size == 0)
+    {
+        return -1;
+    }
+
+    written = snprintf(buffer,
+                       buffer_size,
+                       "%s/%s",
+                       host_url ? host_url : "",
+                       relative_path ? relative_path : "");
+    return (written < 0 || (size_t)written >= buffer_size) ? -1 : 0;
+}
+
 int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
 {
     CURL *curl = NULL;
@@ -189,8 +209,31 @@ fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *rela
 {
     char full_url[FETCH_URL_MAX_PATH_LENGTH];
 
-    snprintf(full_url, sizeof(full_url), "%s/%s", host_url ? host_url : "", relative_path ? relative_path : "");
+    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
+    {
+        return NULL;
+    }
     return fetch_url_async(full_url, timeout_ms);
+}
+
+int fetch_url_with_path_sync(const char *host_url,
+                             const char *relative_path,
+                             int timeout_ms,
+                             fetch_url_result_t *result)
+{
+    char full_url[FETCH_URL_MAX_PATH_LENGTH];
+
+    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
+    {
+        if (result)
+        {
+            fetch_url_result_reset(result);
+            result->code = -1;
+        }
+        return -1;
+    }
+
+    return fetch_url_sync(full_url, timeout_ms, result);
 }
 
 bool fetch_url_poll(fetch_url_op_t *op)

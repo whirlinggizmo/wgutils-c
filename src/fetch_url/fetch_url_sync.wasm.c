@@ -53,6 +53,26 @@ static void fetch_url_result_reset(fetch_url_result_t *result)
     result->url[0] = '\0';
 }
 
+static int fetch_url_join_path(char *buffer,
+                               size_t buffer_size,
+                               const char *host_url,
+                               const char *relative_path)
+{
+    int written = 0;
+
+    if (!buffer || buffer_size == 0)
+    {
+        return -1;
+    }
+
+    written = snprintf(buffer,
+                       buffer_size,
+                       "%s/%s",
+                       host_url ? host_url : "",
+                       relative_path ? relative_path : "");
+    return (written < 0 || (size_t)written >= buffer_size) ? -1 : 0;
+}
+
 int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
 {
     uintptr_t data_ptr = 0;
@@ -87,6 +107,26 @@ int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
     }
 
     return result->code;
+}
+
+int fetch_url_with_path_sync(const char *host_url,
+                             const char *relative_path,
+                             int timeout_ms,
+                             fetch_url_result_t *result)
+{
+    char full_url[FETCH_URL_MAX_PATH_LENGTH];
+
+    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
+    {
+        if (result)
+        {
+            fetch_url_result_reset(result);
+            result->code = -1;
+        }
+        return -1;
+    }
+
+    return fetch_url_sync(full_url, timeout_ms, result);
 }
 
 #endif // EMSCRIPTEN

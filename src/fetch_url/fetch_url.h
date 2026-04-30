@@ -32,6 +32,10 @@ fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *rela
  * `example_run_fetch`, not `_example_run_fetch`). `-sASYNCIFY` is not
  * required for this path. */
 int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result);
+int fetch_url_with_path_sync(const char *host_url,
+                             const char *relative_path,
+                             int timeout_ms,
+                             fetch_url_result_t *result);
 bool fetch_url_poll(fetch_url_op_t *op);
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result);
 void fetch_url_op_free(fetch_url_op_t *op);

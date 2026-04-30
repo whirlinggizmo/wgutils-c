@@ -34,6 +34,16 @@ int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
     return result->code;
 }
 
+int fetch_url_with_path_sync(const char *host_url,
+                             const char *relative_path,
+                             int timeout_ms,
+                             fetch_url_result_t *result)
+{
+    (void)host_url;
+    (void)relative_path;
+    return fetch_url_sync(NULL, timeout_ms, result);
+}
+
 fetch_url_op_t *fetch_url_with_path_async(const char *host_url,
                                           const char *relative_path,
                                           int timeout_ms)
