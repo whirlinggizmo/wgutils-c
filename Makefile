@@ -86,6 +86,7 @@ PUBLIC_HEADERS := \
 	$(WGUTILS_SRC_DIR)/async/wg_op.h \
 	$(WGUTILS_SRC_DIR)/event/event.h \
 	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url.h \
+	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url_common.h \
 	$(WGUTILS_SRC_DIR)/fileio/fileio.h \
 	$(WGUTILS_SRC_DIR)/fileio/fileio_common.h \
 	$(WGUTILS_SRC_DIR)/json/json.h \
@@ -102,6 +103,7 @@ DESKTOP_SRCS := \
 	$(WGUTILS_SRC_DIR)/async/wg_op.c \
 	$(WGUTILS_SRC_DIR)/event/event.c \
 	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url.c \
+	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url_common.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio_common.c \
 	$(WGUTILS_SRC_DIR)/json/json.c \
@@ -122,6 +124,7 @@ WASM_SRCS := \
 	$(WGUTILS_SRC_DIR)/event/event.c \
 	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url.wasm.c \
 	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url_sync.wasm.c \
+	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url_common.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio.wasm.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio_common.c \
 	$(WGUTILS_SRC_DIR)/json/json.c \

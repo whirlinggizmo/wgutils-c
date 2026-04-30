@@ -1,6 +1,7 @@
- #ifndef EMSCRIPTEN
+#ifndef EMSCRIPTEN
 
 #include "fetch_url.h"
+#include "fetch_url_common.h"
 #include <curl/curl.h>
 #include "logger/logger.h"
 #include <stdlib.h>
@@ -15,20 +16,6 @@ typedef struct
     size_t size;
 } fetch_context_t;
 
-static void fetch_url_result_reset(fetch_url_result_t *result)
-{
-    if (!result)
-    {
-        return;
-    }
-
-    free(result->data);
-    result->data = NULL;
-    result->size = 0;
-    result->code = 0;
-    result->url[0] = '\0';
-}
-
 static void fetch_url_op_destroy_impl(void *impl)
 {
     fetch_url_result_t *result = (fetch_url_result_t *)impl;
@@ -38,7 +25,7 @@ static void fetch_url_op_destroy_impl(void *impl)
         return;
     }
 
-    fetch_url_result_reset(result);
+    fetch_url_result_reset_common(result);
     free(result);
 }
 
@@ -72,26 +59,6 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-static int fetch_url_join_path(char *buffer,
-                               size_t buffer_size,
-                               const char *host_url,
-                               const char *relative_path)
-{
-    int written = 0;
-
-    if (!buffer || buffer_size == 0)
-    {
-        return -1;
-    }
-
-    written = snprintf(buffer,
-                       buffer_size,
-                       "%s/%s",
-                       host_url ? host_url : "",
-                       relative_path ? relative_path : "");
-    return (written < 0 || (size_t)written >= buffer_size) ? -1 : 0;
-}
-
 int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
 {
     CURL *curl = NULL;
@@ -103,7 +70,7 @@ int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
         return -1;
     }
 
-    fetch_url_result_reset(result);
+    fetch_url_result_reset_common(result);
     snprintf(result->url, sizeof(result->url), "%s", url ? url : "");
 
     curl = curl_easy_init();
@@ -207,13 +174,7 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 
 fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms)
 {
-    char full_url[FETCH_URL_MAX_PATH_LENGTH];
-
-    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
-    {
-        return NULL;
-    }
-    return fetch_url_async(full_url, timeout_ms);
+    return fetch_url_with_path_async_common(host_url, relative_path, timeout_ms);
 }
 
 int fetch_url_with_path_sync(const char *host_url,
@@ -221,24 +182,12 @@ int fetch_url_with_path_sync(const char *host_url,
                              int timeout_ms,
                              fetch_url_result_t *result)
 {
-    char full_url[FETCH_URL_MAX_PATH_LENGTH];
-
-    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
-    {
-        if (result)
-        {
-            fetch_url_result_reset(result);
-            result->code = -1;
-        }
-        return -1;
-    }
-
-    return fetch_url_sync(full_url, timeout_ms, result);
+    return fetch_url_with_path_sync_common(host_url, relative_path, timeout_ms, result);
 }
 
 bool fetch_url_poll(fetch_url_op_t *op)
 {
-    return wg_op_is_done(op ? &op->op : NULL);
+    return fetch_url_poll_common(op);
 }
 
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result)

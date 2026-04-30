@@ -1,12 +1,14 @@
 #ifdef EMSCRIPTEN
 
 #include "fetch_url.h"
+#include "fetch_url_common.h"
 #include "logger/logger.h"
 
 #include <emscripten.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 EM_ASYNC_JS(int, fetch_url_jspi_download, (const char *url, uintptr_t *out_data, uint32_t *out_size, int *out_code), {
     const targetUrl = UTF8ToString(url);
@@ -39,40 +41,6 @@ EM_ASYNC_JS(int, fetch_url_jspi_download, (const char *url, uintptr_t *out_data,
     }
 });
 
-static void fetch_url_result_reset(fetch_url_result_t *result)
-{
-    if (!result)
-    {
-        return;
-    }
-
-    free(result->data);
-    result->data = NULL;
-    result->size = 0;
-    result->code = 0;
-    result->url[0] = '\0';
-}
-
-static int fetch_url_join_path(char *buffer,
-                               size_t buffer_size,
-                               const char *host_url,
-                               const char *relative_path)
-{
-    int written = 0;
-
-    if (!buffer || buffer_size == 0)
-    {
-        return -1;
-    }
-
-    written = snprintf(buffer,
-                       buffer_size,
-                       "%s/%s",
-                       host_url ? host_url : "",
-                       relative_path ? relative_path : "");
-    return (written < 0 || (size_t)written >= buffer_size) ? -1 : 0;
-}
-
 int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
 {
     uintptr_t data_ptr = 0;
@@ -85,7 +53,7 @@ int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
         return -1;
     }
 
-    fetch_url_result_reset(result);
+    fetch_url_result_reset_common(result);
     snprintf(result->url, sizeof(result->url), "%s", url ? url : "");
 
     log_debug("FETCH_URL(JSPI): Fetching URL: %s", url ? url : "");
@@ -114,19 +82,7 @@ int fetch_url_with_path_sync(const char *host_url,
                              int timeout_ms,
                              fetch_url_result_t *result)
 {
-    char full_url[FETCH_URL_MAX_PATH_LENGTH];
-
-    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
-    {
-        if (result)
-        {
-            fetch_url_result_reset(result);
-            result->code = -1;
-        }
-        return -1;
-    }
-
-    return fetch_url_sync(full_url, timeout_ms, result);
+    return fetch_url_with_path_sync_common(host_url, relative_path, timeout_ms, result);
 }
 
 #endif // EMSCRIPTEN

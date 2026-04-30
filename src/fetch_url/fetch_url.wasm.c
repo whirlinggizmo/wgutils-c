@@ -1,6 +1,7 @@
 #ifdef EMSCRIPTEN
 
 #include "fetch_url.h"
+#include "fetch_url_common.h"
 #include "logger/logger.h"
 
 #include <emscripten/fetch.h>
@@ -14,40 +15,6 @@ typedef struct
 {
     fetch_url_op_t *owner;
 } fetch_context_t;
-
-static void fetch_url_result_reset(fetch_url_result_t *result)
-{
-    if (!result)
-    {
-        return;
-    }
-
-    free(result->data);
-    result->data = NULL;
-    result->size = 0;
-    result->code = 0;
-    result->url[0] = '\0';
-}
-
-static int fetch_url_join_path(char *buffer,
-                               size_t buffer_size,
-                               const char *host_url,
-                               const char *relative_path)
-{
-    int written = 0;
-
-    if (!buffer || buffer_size == 0)
-    {
-        return -1;
-    }
-
-    written = snprintf(buffer,
-                       buffer_size,
-                       "%s/%s",
-                       host_url ? host_url : "",
-                       relative_path ? relative_path : "");
-    return (written < 0 || (size_t)written >= buffer_size) ? -1 : 0;
-}
 
 static void fetch_url_context_destroy(void *impl)
 {
@@ -141,18 +108,12 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
 
 fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms)
 {
-    char full_url[FETCH_URL_MAX_PATH_LENGTH];
-
-    if (fetch_url_join_path(full_url, sizeof(full_url), host_url, relative_path) != 0)
-    {
-        return NULL;
-    }
-    return fetch_url_async(full_url, timeout_ms);
+    return fetch_url_with_path_async_common(host_url, relative_path, timeout_ms);
 }
 
 bool fetch_url_poll(fetch_url_op_t *op)
 {
-    return wg_op_is_done(op ? &op->op : NULL);
+    return fetch_url_poll_common(op);
 }
 
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result)
@@ -182,7 +143,7 @@ void fetch_url_op_free(fetch_url_op_t *op)
         return;
     }
 
-    fetch_url_result_reset(&op->result);
+    fetch_url_result_reset_common(&op->result);
     wg_op_deinit(&op->op);
     free(op);
 }

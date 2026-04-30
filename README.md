@@ -52,6 +52,7 @@ HTTP fetch helpers with different behavior on desktop and wasm.
 - `fetch_url_async()` starts a polling-style fetch operation
 - `fetch_url_finish()` transfers the result out of the operation
 - `fetch_url_sync()` performs a blocking/native fetch on desktop
+- shared helper logic lives in `fetch_url_common.c/.h`
 
 Wasm notes:
 
@@ -64,6 +65,7 @@ Wasm notes:
 
 Implementation files:
 
+- shared helpers: [src/fetch_url/fetch_url_common.h](src/fetch_url/fetch_url_common.h)
 - desktop: [src/fetch_url/fetch_url.c](src/fetch_url/fetch_url.c)
 - wasm async path: [src/fetch_url/fetch_url.wasm.c](src/fetch_url/fetch_url.wasm.c)
 - wasm sync/JSPI path: [src/fetch_url/fetch_url_sync.wasm.c](src/fetch_url/fetch_url_sync.wasm.c)
