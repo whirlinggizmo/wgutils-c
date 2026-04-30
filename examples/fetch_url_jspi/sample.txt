@@ -1,0 +1,4 @@
+This file is fetched by the wasm example harness.
+If the JSPI path is active, the exported wasm function should suspend here,
+resume once the browser fetch Promise resolves, and finish without requiring
+the caller to drive a separate polling state machine inside the C flow.

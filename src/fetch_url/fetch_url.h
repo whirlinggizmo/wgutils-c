@@ -26,6 +26,12 @@ typedef struct
 
 fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms);
 fetch_url_op_t *fetch_url_with_path_async(const char *host_url, const char *relative_path, int timeout_ms);
+/* On wasm, this API requires the final link target to use `-sJSPI=1`.
+ * Any exported function that can call this API must also be listed in
+ * `-sJSPI_EXPORTS=[...]`, using the JS-visible export name (for example
+ * `example_run_fetch`, not `_example_run_fetch`). `-sASYNCIFY` is not
+ * required for this path. */
+int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result);
 bool fetch_url_poll(fetch_url_op_t *op);
 int fetch_url_finish(fetch_url_op_t *op, fetch_url_result_t *result);
 void fetch_url_op_free(fetch_url_op_t *op);

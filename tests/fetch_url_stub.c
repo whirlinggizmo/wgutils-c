@@ -20,6 +20,20 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
     return op;
 }
 
+int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
+{
+    if (!result)
+    {
+        return -1;
+    }
+
+    (void)url;
+    (void)timeout_ms;
+    memset(result, 0, sizeof(*result));
+    result->code = 501;
+    return result->code;
+}
+
 fetch_url_op_t *fetch_url_with_path_async(const char *host_url,
                                           const char *relative_path,
                                           int timeout_ms)

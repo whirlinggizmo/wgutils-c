@@ -3,4 +3,4 @@
 /include
 /deps/libcurl
 /deps/build
-/compile_flags.txt
+.vscode

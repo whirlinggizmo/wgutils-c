@@ -66,6 +66,21 @@ OBJ_DESKTOP_DIR := $(OBJ_DIR)/desktop
 OBJ_WASM_DIR := $(OBJ_DIR)/wasm
 DESKTOP_LIB := $(OUT_DIR)/libwgutils.a
 WASM_LIB := $(OUT_DIR)/libwgutils.wasm.a
+FETCH_URL_EXAMPLE_DIR := $(WGUTILS_DIR)/examples/fetch_url_jspi
+FETCH_URL_EXAMPLE_OUT_DIR := $(OUT_DIR)/examples/fetch_url_jspi
+FETCH_URL_EXAMPLE_COMMON_LDFLAGS := \
+	-s WASM=1 \
+	-s EXPORT_ES6=1 \
+	-s MODULARIZE=1 \
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s NO_EXIT_RUNTIME=1 \
+	-s EXPORTED_FUNCTIONS='["_malloc","_free","_example_reset","_example_phase","_example_last_status","_example_last_size","_example_trace","_example_run_fetch","_example_poll_fetch"]' \
+	-s EXPORTED_RUNTIME_METHODS='["stringToNewUTF8","UTF8ToString"]'
+FETCH_URL_EXAMPLE_POLL_DIR := $(FETCH_URL_EXAMPLE_OUT_DIR)/poll
+FETCH_URL_EXAMPLE_JSPI_DIR := $(FETCH_URL_EXAMPLE_OUT_DIR)/jspi
+FETCH_URL_EXAMPLE_POLL_JS := $(FETCH_URL_EXAMPLE_POLL_DIR)/example.js
+FETCH_URL_EXAMPLE_JSPI_JS := $(FETCH_URL_EXAMPLE_JSPI_DIR)/example.js
+FETCH_URL_EXAMPLE_STATIC_FILES := app.js index.html sample.txt
 
 PUBLIC_HEADERS := \
 	$(WGUTILS_SRC_DIR)/async/wg_op.h \
@@ -106,6 +121,7 @@ WASM_SRCS := \
 	$(WGUTILS_SRC_DIR)/async/wg_op.c \
 	$(WGUTILS_SRC_DIR)/event/event.c \
 	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url.wasm.c \
+	$(WGUTILS_SRC_DIR)/fetch_url/fetch_url_sync.wasm.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio.wasm.c \
 	$(WGUTILS_SRC_DIR)/fileio/fileio_common.c \
 	$(WGUTILS_SRC_DIR)/json/json.c \
@@ -120,6 +136,8 @@ WASM_SRCS := \
 	$(WGUTILS_SRC_DIR)/vendor/list/list_iterator.c \
 	$(WGUTILS_SRC_DIR)/vendor/logger-c/log.c \
 	$(WGUTILS_SRC_DIR)/websocket/websocket.wasm.c
+
+FETCH_URL_EXAMPLE_SRCS = $(WASM_SRCS) $(FETCH_URL_EXAMPLE_DIR)/example_fetch.c
 
 DESKTOP_OBJS := $(patsubst $(WGUTILS_SRC_DIR)/%.c,$(OBJ_DESKTOP_DIR)/%.o,$(DESKTOP_SRCS))
 WASM_OBJS := $(patsubst $(WGUTILS_SRC_DIR)/%.c,$(OBJ_WASM_DIR)/%.o,$(WASM_SRCS))
@@ -149,7 +167,7 @@ UNIT_SRCS := \
 	$(WGUTILS_SRC_DIR)/vendor/list/list_iterator.c \
 	$(WGUTILS_SRC_DIR)/vendor/logger-c/log.c
 
-.PHONY: all deps libcurl desktop wasm clean deep-clean test test_desktop unit_test uri_test headers header_stale_clean
+.PHONY: all deps libcurl desktop wasm clean deep-clean test test_desktop unit_test uri_test headers header_stale_clean fetch_url_examples fetch_url_sizes
 
 all: desktop wasm
 
@@ -158,11 +176,21 @@ deps: libcurl
 libcurl: $(CURL_STATIC_LIB)
 	@echo "Built local libcurl: $(CURL_STATIC_LIB)"
 
-desktop: $(DESKTOP_LIB) $(DESKTOP_LINK_FLAGS_FILE) headers
+desktop: $(DESKTOP_LIB) headers
 	@echo "Built desktop wgutils archive: $(DESKTOP_LIB)"
 
 wasm: $(WASM_LIB) headers
 	@echo "Built wasm wgutils archive: $(WASM_LIB)"
+
+fetch_url_examples: $(FETCH_URL_EXAMPLE_POLL_JS) $(FETCH_URL_EXAMPLE_JSPI_JS)
+	@echo "Built fetch_url examples:"
+	@echo "  poll: $(FETCH_URL_EXAMPLE_POLL_DIR)/index.html"
+	@echo "  jspi: $(FETCH_URL_EXAMPLE_JSPI_DIR)/index.html"
+
+fetch_url_sizes: fetch_url_examples
+	@printf "%-8s %12s %12s\n" "build" "wasm(bytes)" "js(bytes)"
+	@printf "%-8s %12s %12s\n" "poll" "$$(stat -c '%s' $(FETCH_URL_EXAMPLE_POLL_DIR)/example.wasm)" "$$(stat -c '%s' $(FETCH_URL_EXAMPLE_POLL_DIR)/example.js)"
+	@printf "%-8s %12s %12s\n" "jspi" "$$(stat -c '%s' $(FETCH_URL_EXAMPLE_JSPI_DIR)/example.wasm)" "$$(stat -c '%s' $(FETCH_URL_EXAMPLE_JSPI_DIR)/example.js)"
 
 headers: header_stale_clean $(PUBLIC_HEADER_OUTPUTS)
 	@echo "Built wgutils include tree: $(INCLUDE_OUT_DIR)"
@@ -208,6 +236,26 @@ $(WASM_LIB): $(WASM_OBJS)
 	@mkdir -p "$(EM_CACHE_DIR)"
 	$(EM_ENV) $(EMAR) rcs $@ $(WASM_OBJS)
 
+$(FETCH_URL_EXAMPLE_POLL_DIR)/%: $(FETCH_URL_EXAMPLE_DIR)/%
+	@mkdir -p $(FETCH_URL_EXAMPLE_POLL_DIR)
+	install -m 644 $< $@
+
+$(FETCH_URL_EXAMPLE_JSPI_DIR)/%: $(FETCH_URL_EXAMPLE_DIR)/%
+	@mkdir -p $(FETCH_URL_EXAMPLE_JSPI_DIR)
+	install -m 644 $< $@
+
+$(FETCH_URL_EXAMPLE_POLL_JS): $(FETCH_URL_EXAMPLE_SRCS) $(addprefix $(FETCH_URL_EXAMPLE_POLL_DIR)/,$(FETCH_URL_EXAMPLE_STATIC_FILES))
+	@mkdir -p $(FETCH_URL_EXAMPLE_POLL_DIR)
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(WASM_PLATFORM_CFLAGS) $(CFLAGS) $(WASM_INCLUDES) $(FETCH_URL_EXAMPLE_SRCS) \
+		$(FETCH_URL_EXAMPLE_COMMON_LDFLAGS) -s FETCH=1 -o $@
+
+$(FETCH_URL_EXAMPLE_JSPI_JS): $(FETCH_URL_EXAMPLE_SRCS) $(addprefix $(FETCH_URL_EXAMPLE_JSPI_DIR)/,$(FETCH_URL_EXAMPLE_STATIC_FILES))
+	@mkdir -p $(FETCH_URL_EXAMPLE_JSPI_DIR)
+	@mkdir -p "$(EM_CACHE_DIR)"
+	$(EM_ENV) $(CC_WASM) $(WASM_PLATFORM_CFLAGS) $(CFLAGS) -DWGUTILS_EXAMPLE_USE_FETCH_URL_SYNC=1 $(WASM_INCLUDES) $(FETCH_URL_EXAMPLE_SRCS) \
+		$(FETCH_URL_EXAMPLE_COMMON_LDFLAGS) -s JSPI=1 -s JSPI_EXPORTS='["example_run_fetch"]' -o $@
+
 $(INCLUDE_OUT_DIR)/%: $(WGUTILS_SRC_DIR)/%
 	@mkdir -p $(dir $@)
 	install -m 644 $< $@
@@ -223,7 +271,7 @@ unit_test:
 	@tail -n 1 /tmp/wgutils_unit_tests.log
 
 uri_test: desktop
-	$(CC) $(CFLAGS) $(INCLUDES) $(TEST_DIR)/uri_test.c $(DESKTOP_LIB) $$(cat $(DESKTOP_LINK_FLAGS_FILE)) -o $(URI_TEST_BIN)
+	$(CC) $(CFLAGS) $(INCLUDES) $(TEST_DIR)/uri_test.c $(DESKTOP_LIB) -lssl -lcrypto -lz -o $(URI_TEST_BIN)
 	@$(URI_TEST_BIN)
 
 clean:

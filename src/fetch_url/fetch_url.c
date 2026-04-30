@@ -72,37 +72,26 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
+int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
 {
-    fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));
-    fetch_url_result_t *stored_result = NULL;
     CURL *curl = NULL;
     fetch_context_t context = {0};
     CURLcode res;
 
-    if (!op)
+    if (!result)
     {
-        return NULL;
+        return -1;
     }
 
-    stored_result = (fetch_url_result_t *)calloc(1, sizeof(fetch_url_result_t));
-    if (!stored_result)
-    {
-        free(op);
-        return NULL;
-    }
-
-    wg_op_init(&op->op, WG_OP_KIND_FETCH_URL, stored_result, fetch_url_op_destroy_impl);
-    snprintf(stored_result->url, sizeof(stored_result->url), "%s", url ? url : "");
+    fetch_url_result_reset(result);
+    snprintf(result->url, sizeof(result->url), "%s", url ? url : "");
 
     curl = curl_easy_init();
     if (!curl)
     {
         log_error("FETCH_URL: Error initializing curl");
-        stored_result->code = -1;
-        op->result = *stored_result;
-        wg_op_complete(&op->op, stored_result->code);
-        return op;
+        result->code = -1;
+        return result->code;
     }
 
     // NOLINTBEGIN(bugprone-sizeof-expression) -- curl typecheck macros use sizeof internally
@@ -123,16 +112,16 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
         long http_code = 0;
 
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        stored_result->code = (int)http_code;
+        result->code = (int)http_code;
         if (http_code == 200)
         {
             char *ptr = NULL;
 
-            stored_result->size = context.size;
+            result->size = context.size;
             if (context.size > (SIZE_MAX - 1))
             {
-                stored_result->code = -1;
-                stored_result->size = 0;
+                result->code = -1;
+                result->size = 0;
                 free(context.data);
                 context.data = NULL;
             }
@@ -141,15 +130,15 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
                 ptr = realloc(context.data, context.size + 1);
                 if (!ptr)
                 {
-                    stored_result->code = -1;
-                    stored_result->size = 0;
+                    result->code = -1;
+                    result->size = 0;
                     free(context.data);
                     context.data = NULL;
                 }
                 else
                 {
                     ptr[context.size] = '\0';
-                    stored_result->data = ptr;
+                    result->data = ptr;
                 }
             }
         }
@@ -162,13 +151,35 @@ fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
     else
     {
         log_warn("FETCH_URL: curl_easy_perform() failed for '%s': %s", url, curl_easy_strerror(res));
-        stored_result->data = NULL;
-        stored_result->size = 0;
-        stored_result->code = 500;
+        result->data = NULL;
+        result->size = 0;
+        result->code = 500;
         free(context.data);
     }
 
     curl_easy_cleanup(curl);
+    return result->code;
+}
+
+fetch_url_op_t *fetch_url_async(const char *url, int timeout_ms)
+{
+    fetch_url_op_t *op = (fetch_url_op_t *)calloc(1, sizeof(fetch_url_op_t));
+    fetch_url_result_t *stored_result = NULL;
+
+    if (!op)
+    {
+        return NULL;
+    }
+
+    stored_result = (fetch_url_result_t *)calloc(1, sizeof(fetch_url_result_t));
+    if (!stored_result)
+    {
+        free(op);
+        return NULL;
+    }
+
+    wg_op_init(&op->op, WG_OP_KIND_FETCH_URL, stored_result, fetch_url_op_destroy_impl);
+    fetch_url_sync(url, timeout_ms, stored_result);
     op->result = *stored_result;
     wg_op_complete(&op->op, stored_result->code);
     return op;
