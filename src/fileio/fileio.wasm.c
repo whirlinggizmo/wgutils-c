@@ -48,6 +48,25 @@ int fileio_init(const char *mount_point)
 
 void fileio_deinit(void)
 {
+    if (fileio_mount_point_initialized)
+    {
+        EM_ASM({
+            const path = UTF8ToString($0);
+            try
+            {
+                FS.unmount(path);
+            }
+            catch (err)
+            {
+                if (!err || err.errno !== 10)
+                {
+                    console.warn("FILEIO: Failed to unmount IDBFS at " + path, err);
+                }
+            }
+            Module.fileio_idbfs_syncing = false;
+        }, fileio_mount_point);
+    }
+
     // Mark not-ready immediately so callers do not assume cache restore state
     // remains valid after teardown starts.
     EM_ASM({
