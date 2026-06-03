@@ -34,7 +34,7 @@ static void fetch_success(emscripten_fetch_t *fetch)
         return;
     }
 
-    op->result.data = (char *)malloc(fetch->numBytes + 1);
+    op->result.data = (unsigned char *)malloc(fetch->numBytes + 1);
     if (op->result.data == NULL)
     {
         log_error("FETCH_URL: Failed to allocate memory for fetched content.");

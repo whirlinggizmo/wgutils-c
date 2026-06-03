@@ -12,7 +12,7 @@
 
 typedef struct
 {
-    char *data;
+    unsigned char *data;
     size_t size;
 } fetch_context_t;
 
@@ -46,7 +46,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     }
     new_size = context->size + total_size;
 
-    char *ptr = realloc(context->data, new_size);
+    unsigned char *ptr = realloc(context->data, new_size);
     if (!ptr)
     {
         return 0; // realloc failed

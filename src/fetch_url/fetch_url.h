@@ -12,7 +12,7 @@ extern "C" {
 #define FETCH_URL_MAX_PATH_LENGTH 256
 typedef struct
 {
-    char *data;
+    unsigned char *data;
     size_t size;
     int code;
     char url[FETCH_URL_MAX_PATH_LENGTH];

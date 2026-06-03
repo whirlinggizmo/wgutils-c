@@ -61,7 +61,7 @@ int fetch_url_sync(const char *url, int timeout_ms, fetch_url_result_t *result)
     rc = fetch_url_jspi_download(url ? url : "", &data_ptr, &size, &status_code);
     if (rc == 0)
     {
-        result->data = (char *)data_ptr;
+        result->data = (unsigned char *)data_ptr;
         result->size = (size_t)size;
         result->code = status_code;
         log_debug("FETCH_URL(JSPI): Fetched %u bytes from %s", size, result->url);
