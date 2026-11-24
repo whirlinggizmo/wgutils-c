@@ -1,4 +1,4 @@
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 
 #include "fetch_url.h"
 #include "fetch_url_common.h"
@@ -313,4 +313,4 @@ void fetch_url_op_free(fetch_url_op_t *op)
     free(op);
 }
 
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__

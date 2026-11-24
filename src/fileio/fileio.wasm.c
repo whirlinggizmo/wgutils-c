@@ -1,4 +1,4 @@
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 
 #include "fileio.h"
 #include "fileio_common.h"

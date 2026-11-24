@@ -1,4 +1,4 @@
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 
 #include "websocket.h"
 #include "logger/logger.h"
@@ -654,4 +654,4 @@ bool websocket_is_connected(const websocket_t *ws){return ws?ws->connected:false
 
 const char *websocket_get_url(const websocket_t *ws){return ws?ws->url:NULL;}
 
-#endif /* EMSCRIPTEN */
+#endif /* __EMSCRIPTEN__ */

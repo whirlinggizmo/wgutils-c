@@ -1,4 +1,4 @@
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 
 #include "fetch_url.h"
 #include "fetch_url_common.h"
@@ -167,4 +167,4 @@ float fetch_url_ping(const char *url, int timeout_ms)
     return -1.0f;
 }
 
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__

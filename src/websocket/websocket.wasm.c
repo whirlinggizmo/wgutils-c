@@ -1,4 +1,4 @@
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 
 #include "websocket.h"
 #include "logger/logger.h"
@@ -187,4 +187,4 @@ const char *websocket_get_url(const websocket_t *ws)
     return ws->url;
 }
 
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__

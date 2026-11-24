@@ -1,4 +1,4 @@
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 
 #include "fetch_url.h"
 #include "fetch_url_common.h"
@@ -85,4 +85,4 @@ int fetch_url_with_path_sync(const char *host_url,
     return fetch_url_with_path_sync_common(host_url, relative_path, timeout_ms, result);
 }
 
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__
